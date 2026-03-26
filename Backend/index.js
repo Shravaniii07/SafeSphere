@@ -5,6 +5,7 @@ import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
 import "./cron/tripCron.js";
 import mapRoutes from "./routes/mapRoutes.js";
 import tripRoutes from "./routes/tripRoutes.js";
+import reportRoutes from './routes/reportRoutes.js';
 
 dotenv.config();
 connectDB();
@@ -21,6 +22,7 @@ app.get("/", (req, res) => {
 
 app.use("/api/map", mapRoutes);
 app.use("/api/trip", tripRoutes);
+app.use("/api/reports", reportRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
