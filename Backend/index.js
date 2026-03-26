@@ -2,7 +2,9 @@ import express from "express";
 import dotenv from "dotenv";
 import connectDB from "./config/db.js";
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
+import "./cron/tripCron.js";
 import mapRoutes from "./routes/mapRoutes.js";
+import tripRoutes from "./routes/tripRoutes.js";
 
 dotenv.config();
 connectDB();
@@ -18,6 +20,7 @@ app.get("/", (req, res) => {
 // Routes will be added here by all members
 
 app.use("/api/map", mapRoutes);
+app.use("/api/trip", tripRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
