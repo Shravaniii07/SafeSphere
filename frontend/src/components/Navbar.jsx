@@ -21,6 +21,12 @@ export default function Navbar({ title, onNavigate, onBurgerClick }) {
           <Bell className="w-[19px] h-[19px]" />
           {user.unreadNotifications > 0 && <span className="absolute top-1.5 right-1.5 w-4 h-4 text-[9px] font-bold bg-accent text-white rounded-full flex items-center justify-center shadow-[0_2px_4px_rgba(244,63,94,0.3)]">{user.unreadNotifications}</span>}
         </button>
+      <button
+  onClick={() => onNavigate('SheSafe')}
+  className="px-4 py-2 bg-pink-500 text-white rounded-xl text-sm font-semibold hover:bg-pink-600 transition-all"
+>
+  Women Safety
+</button>
         <button onClick={() => onNavigate('sos')} className="px-4 py-2 bg-accent text-white rounded-xl text-sm font-display font-semibold flex items-center gap-2 hover:bg-accent-dark hover:-translate-y-px active:scale-[0.96] transition-all duration-200 animate-sos-glow cursor-pointer min-h-[44px]" aria-label="Emergency SOS">
           <AlertTriangle className="w-4 h-4" /><span className="hidden sm:inline">SOS</span>
         </button>
