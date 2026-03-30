@@ -13,6 +13,10 @@ import trackingRoutes from "./routes/trackingRoutes.js";
 
 // SOCKET
 import socketHandler from "./sockets/socketHandler.js";
+import "./cron/tripCron.js";
+import mapRoutes from "./routes/mapRoutes.js";
+import tripRoutes from "./routes/tripRoutes.js";
+import reportRoutes from './routes/reportRoutes.js';
 
 dotenv.config();
 connectDB();
@@ -49,6 +53,10 @@ socketHandler(io);
 
 
 // ERROR MIDDLEWARE (keep at last)
+app.use("/api/map", mapRoutes);
+app.use("/api/trip", tripRoutes);
+app.use("/api/reports", reportRoutes);
+
 app.use(notFound);
 app.use(errorHandler);
 
