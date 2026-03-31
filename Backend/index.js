@@ -20,7 +20,15 @@ import reportRoutes from "./routes/reportRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 
-// Initialize App & Environment
+
+// SOCKET
+import socketHandler from "./sockets/socketHandler.js";
+import "./cron/tripCron.js";
+import mapRoutes from "./routes/mapRoutes.js";
+import tripRoutes from "./routes/tripRoutes.js";
+import reportRoutes from './routes/reportRoutes.js';
+
+
 dotenv.config();
 connectDB();
 
@@ -39,6 +47,7 @@ socketHandler(io);
 app.use(express.json());
 app.use(cookieParser());
 app.use(cors());
+
 
 //socket.io middleware to make io accessible in routes
 app.use((req, res, next) => {
@@ -66,6 +75,12 @@ app.use("/api/reports", reportRoutes);
 app.use("/api/notifications", notificationRoutes);
 
 // --- ERROR HANDLING ---
+
+// ERROR MIDDLEWARE (keep at last)
+app.use("/api/map", mapRoutes);
+app.use("/api/trip", tripRoutes);
+app.use("/api/reports", reportRoutes);
+
 app.use(notFound);
 app.use(errorHandler);
 
