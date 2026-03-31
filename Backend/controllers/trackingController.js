@@ -4,8 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 export const createTracking = async (req, res) => {
   try {
     const tracking = await Tracking.create({
-      // userId: req.user._id,
-      userId: "dummyUser123",
+      userId: req.user._id,
       trackingId: uuidv4()
     });
 

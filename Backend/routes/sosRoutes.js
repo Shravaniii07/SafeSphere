@@ -3,13 +3,11 @@ import {
   triggerSOS,
   getSOSStatus
 } from "../controllers/sosController.js";
-// import protect from "../middleware/authMiddleware.js";
 import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.post("/trigger", triggerSOS);
-// router.get("/status", protect, getSOSStatus);
-router.get("/status", getSOSStatus);
+router.post("/trigger", protect, triggerSOS);
+router.get("/status", protect, getSOSStatus);
 
 export default router;

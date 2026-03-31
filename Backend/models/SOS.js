@@ -3,10 +3,9 @@ import mongoose from "mongoose";
 const sosSchema = new mongoose.Schema(
     {
         userId: {
-            // type: mongoose.Schema.Types.ObjectId,
-            // ref: "User",
-            type: String
-
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: true
         },
         status: {
             type: String,
