@@ -1,28 +1,48 @@
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, AlertTriangle, Globe, MapPin, Activity,
-  Clock, Map, Bell, User, Radio, Shield, ChevronRight, Wifi, Navigation, Lock
+  Clock, Map, Bell, User, Radio, Shield, ChevronRight,
+  ShieldCheck, Phone, Flame, Footprints, PhoneIncoming, Lightbulb
 } from 'lucide-react'
 import { useApp } from '../context/AppContext'
+import { useAuth } from '../context/AuthContext'
 
 const navItems = [
   { section: 'Main' },
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'sos', label: 'Smart SOS', icon: AlertTriangle },
-  { id: 'location', label: 'Live Location', icon: Globe },
-  { id: 'nearby', label: 'Nearby Services', icon: MapPin },
+  { id: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: '/sos', label: 'Smart SOS', icon: AlertTriangle },
+  { id: '/location', label: 'Live Location', icon: Globe },
+  { id: '/nearby', label: 'Nearby Services', icon: MapPin },
   { section: 'Safety' },
-  { id: 'emergency', label: 'Emergency Info', icon: Activity },
-  { id: 'travel', label: 'Travel Safety', icon: Clock },
-  { id: 'heatmap', label: 'Safety Heatmap', icon: Map },
+  { id: '/emergency', label: 'Emergency Info', icon: Activity },
+  { id: '/women-safety', label: 'Women Safety', icon: ShieldCheck },
+  { id: '/travel', label: 'Travel Safety', icon: Clock },
+  { id: '/map', label: 'Safety Map', icon: Map },
+  { id: '/safety-map', label: 'Incident Heatmap', icon: Flame },
+  { id: '/emergency-info', label: 'Helpline Directory', icon: Phone },
+  { id: '/emergency-safety', label: 'Emergency Guide', icon: Footprints },
+  { id: '/safety-tips', label: 'Safety Tips', icon: Lightbulb },
+  { section: 'Tools' },
+  { id: '/fake-call', label: 'Fake Call', icon: PhoneIncoming },
+  { id: '/tracking', label: 'Public Tracking', icon: Radio },
   { section: 'Account' },
-  { id: 'notifications', label: 'Notifications', icon: Bell },
-  { id: 'profile', label: 'Profile', icon: User },
-  { id: 'tracking', label: 'Public Tracking', icon: Radio },
-  { id: 'admin', label: 'Admin Panel', icon: Shield, adminOnly: true },
+  { id: '/notifications', label: 'Notifications', icon: Bell },
+  { id: '/profile', label: 'Profile', icon: User },
+  { id: '/heatmap', label: 'Safety Heatmap', icon: Map },
+  { id: '/admin/dashboard', label: 'Admin Panel', icon: Shield, adminOnly: true },
 ]
 
-export default function Sidebar({ activePage, onNavigate, isOpen }) {
+export default function Sidebar({ isOpen, onClose }) {
   const { user } = useApp()
+  const { role } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const activePage = location.pathname
+
+  const handleNav = (path) => {
+    navigate(path)
+    onClose?.()
+  }
 
   return (
     <aside className={`w-[272px] fixed top-0 left-0 bottom-0 z-[100] flex flex-col transition-transform duration-300 overflow-y-auto ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 glass-dark noise-overlay`}>
@@ -39,20 +59,21 @@ export default function Sidebar({ activePage, onNavigate, isOpen }) {
       {/* Navigation */}
       <nav className="relative z-10 px-3 flex-1 pb-4" role="navigation" aria-label="Main navigation">
         {navItems.map((item, i) => {
-          if (item.adminOnly && !user.isAdmin) return null
+          if (item.adminOnly && role !== 'admin') return null
           if (item.section) return (
             <div key={i} className="text-[10px] font-display font-semibold uppercase tracking-[0.12em] text-white/30 px-4 pt-6 pb-2">{item.section}</div>
           )
+          const isActive = activePage === item.id
           return (
-            <button key={item.id} onClick={() => onNavigate(item.id)}
-              aria-current={activePage === item.id ? 'page' : undefined}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 mb-0.5 cursor-pointer min-h-[40px] group focus-visible:outline-2 focus-visible:outline-secondary focus-visible:outline-offset-2 ${activePage === item.id ? 'bg-white/[0.12] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]' : 'text-white/60 hover:bg-white/[0.07] hover:text-white/90'}`}>
-              <item.icon className={`w-[18px] h-[18px] transition-colors duration-200 ${activePage === item.id ? 'text-secondary-light' : 'text-white/40 group-hover:text-white/70'}`} />
+            <button key={item.id} onClick={() => handleNav(item.id)}
+              aria-current={isActive ? 'page' : undefined}
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 mb-0.5 cursor-pointer min-h-[40px] group focus-visible:outline-2 focus-visible:outline-secondary focus-visible:outline-offset-2 ${isActive ? 'bg-white/[0.12] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]' : 'text-white/60 hover:bg-white/[0.07] hover:text-white/90'}`}>
+              <item.icon className={`w-[18px] h-[18px] transition-colors duration-200 ${isActive ? 'text-secondary-light' : 'text-white/40 group-hover:text-white/70'}`} />
               <span className="flex-1 text-left">{item.label}</span>
-              {item.id === 'notifications' && user.unreadNotifications > 0 && (
+              {item.id === '/notifications' && user.unreadNotifications > 0 && (
                 <span className="w-5 h-5 text-[10px] font-bold bg-accent rounded-full flex items-center justify-center text-white">{user.unreadNotifications}</span>
               )}
-              {activePage === item.id && <ChevronRight className="w-3.5 h-3.5 text-white/40" />}
+              {isActive && <ChevronRight className="w-3.5 h-3.5 text-white/40" />}
             </button>
           )
         })}
@@ -70,7 +91,7 @@ export default function Sidebar({ activePage, onNavigate, isOpen }) {
 
       {/* User */}
       <div className="relative z-10 px-3 py-4 border-t border-white/[0.06]">
-        <button onClick={() => onNavigate('profile')}
+        <button onClick={() => handleNav('/profile')}
           className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/[0.07] transition-all duration-200 cursor-pointer min-h-[44px] group">
           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-secondary to-secondary-dark flex items-center justify-center font-display font-semibold text-sm text-white shadow-sm">{user.initials}</div>
           <div className="text-left flex-1 min-w-0">

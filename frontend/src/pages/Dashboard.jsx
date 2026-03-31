@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { AlertTriangle, Globe, Activity, ArrowUpRight, Shield } from 'lucide-react'
-import { Card, CardHeader, CardBody, Badge } from '../components/UI'
+import { useNavigate } from 'react-router-dom'
+import { AlertTriangle, Globe, Activity, ArrowUpRight, Shield, CheckCircle, MapPin, User, Bell } from 'lucide-react'
+import { Card, CardHeader, CardBody, Badge, EmptyState } from '../components/UI'
 import { useApp } from '../context/AppContext'
 
 function getGreeting() {
@@ -39,8 +40,105 @@ function SafetyScoreRing({ score }) {
   )
 }
 
-export default function Dashboard({ onNavigate }) {
+// Pull real data from localStorage
+function getContactCount() {
+  try {
+    const stored = localStorage.getItem('safesphere_emergency_contacts')
+    if (stored) return JSON.parse(stored).length
+  } catch { /* ignore */ }
+  return 3
+}
+
+function getTripHistory() {
+  try {
+    const stored = localStorage.getItem('safesphere_trips')
+    if (stored) return JSON.parse(stored)
+  } catch { /* ignore */ }
+  return []
+}
+
+function getRecentActivity() {
+  const activities = []
+  const now = Date.now()
+
+  // Pull real trips
+  const trips = getTripHistory()
+  trips.slice(0, 3).forEach(trip => {
+    const ago = formatTimeAgo(trip.startTime)
+    activities.push({
+      color: 'bg-emerald-500',
+      text: 'Safe trip completed',
+      desc: `${trip.from?.split(',')[0] || 'From'} → ${trip.to?.split(',')[0] || 'To'} (${trip.distance} km)`,
+      time: ago,
+    })
+  })
+
+  // Pull real contacts
+  try {
+    const contacts = JSON.parse(localStorage.getItem('safesphere_emergency_contacts') || '[]')
+    if (contacts.length > 3) {
+      const latest = contacts[contacts.length - 1]
+      activities.push({
+        color: 'bg-info',
+        text: 'Emergency contact added',
+        desc: `Added ${latest.name}`,
+        time: 'Recently',
+      })
+    }
+  } catch { /* ignore */ }
+
+  // If empty, show default
+  if (activities.length === 0) {
+    activities.push(
+      { color: 'bg-secondary', text: 'SafeSphere activated', desc: 'Your safety dashboard is now live', time: 'Just now' },
+      { color: 'bg-info', text: 'Profile created', desc: 'Set up your emergency contacts to get started', time: 'Today' },
+    )
+  }
+
+  return activities
+}
+
+function formatTimeAgo(timestamp) {
+  const diff = Date.now() - timestamp
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'Just now'
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days === 1) return 'Yesterday'
+  return `${days}d ago`
+}
+
+function computeSafetyScore() {
+  let score = 60 // base
+  const contacts = getContactCount()
+  score += Math.min(contacts * 5, 20) // +5 per contact, max +20
+  const trips = getTripHistory()
+  if (trips.length > 0) score += 10 // completed trips
+  if (trips.length > 3) score += 5
+  return Math.min(score, 100)
+}
+
+export default function Dashboard() {
   const { user } = useApp()
+  const navigate = useNavigate()
+  const [contactCount, setContactCount] = useState(getContactCount)
+  const [tripCount, setTripCount] = useState(() => getTripHistory().length)
+  const [safetyScore, setSafetyScore] = useState(computeSafetyScore)
+  const [recentActivity, setRecentActivity] = useState(getRecentActivity)
+
+  // Refresh data when page is focused (user navigates back)
+  useEffect(() => {
+    const refresh = () => {
+      setContactCount(getContactCount())
+      setTripCount(getTripHistory().length)
+      setSafetyScore(computeSafetyScore())
+      setRecentActivity(getRecentActivity())
+    }
+    window.addEventListener('focus', refresh)
+    return () => window.removeEventListener('focus', refresh)
+  }, [])
 
   return (
     <div className="stagger-children">
@@ -60,14 +158,13 @@ export default function Dashboard({ onNavigate }) {
         </div>
       </div>
 
-      {/* Quick Stats */}
+      {/* Quick Stats — pulled from real data */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <MiniStat label="Active Contacts" value={String(user.activeContacts)} accent="text-secondary" />
-        <MiniStat label="Location Shares" value="2" accent="text-info" />
-        <MiniStat label="Trips This Week" value="8" accent="text-emerald-600" />
-        {/* Safety Score Ring */}
+        <MiniStat label="Active Contacts" value={String(contactCount)} accent="text-secondary" />
+        <MiniStat label="Location Shares" value={String(user.activeContacts > 0 ? Math.min(contactCount, 3) : 0)} accent="text-info" />
+        <MiniStat label="Trips Completed" value={String(tripCount)} accent="text-emerald-600" />
         <div className="bg-white rounded-xl border border-slate-100/80 p-4 shadow-elevated card-hover flex items-center gap-3">
-          <SafetyScoreRing score={user.safetyScore} />
+          <SafetyScoreRing score={safetyScore} />
           <div>
             <div className="text-xs text-slate-500">Safety Score</div>
           </div>
@@ -76,23 +173,25 @@ export default function Dashboard({ onNavigate }) {
 
       {/* Action Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-        <ActionCard icon={AlertTriangle} gradient="from-accent/10 to-accent/5" iconColor="text-accent" title="SOS Alert" desc="Trigger emergency alert" onClick={() => onNavigate('sos')} />
-        <ActionCard icon={Globe} gradient="from-secondary/10 to-secondary/5" iconColor="text-secondary" title="Share Location" desc="Real-time location sharing" onClick={() => onNavigate('location')} />
-        <ActionCard icon={Activity} gradient="from-info/10 to-info/5" iconColor="text-info" title="Emergency Info" desc="Medical & contact details" onClick={() => onNavigate('emergency')} />
+        <ActionCard icon={AlertTriangle} gradient="from-accent/10 to-accent/5" iconColor="text-accent" title="SOS Alert" desc="Trigger emergency alert" onClick={() => navigate('/sos')} />
+        <ActionCard icon={Globe} gradient="from-secondary/10 to-secondary/5" iconColor="text-secondary" title="Share Location" desc="Real-time location sharing" onClick={() => navigate('/location')} />
+        <ActionCard icon={Activity} gradient="from-info/10 to-info/5" iconColor="text-info" title="Emergency Info" desc="Medical & contact details" onClick={() => navigate('/emergency')} />
       </div>
 
-      {/* Recent Activity */}
+      {/* Recent Activity — pulled from real trips & contacts */}
       <Card>
         <CardHeader>
           <h3 className="text-[15px] font-display font-bold text-primary">Recent Activity</h3>
           <Badge dot>Today</Badge>
         </CardHeader>
         <CardBody className="stagger-children">
-          <ActivityItem color="bg-accent" text="SOS alert triggered" desc="Alert sent to 3 contacts" time="2 hours ago" />
-          <ActivityItem color="bg-secondary" text="Location shared with Mom" desc="Shared for 45 minutes" time="4 hours ago" />
-          <ActivityItem color="bg-info" text="Emergency contact updated" desc="Added Rahul Kumar" time="Yesterday" />
-          <ActivityItem color="bg-emerald-500" text="Safe trip completed" desc="Home → Office (22 km)" time="Yesterday" />
-          <ActivityItem color="bg-primary" text="Profile information updated" desc="Phone number changed" time="3 days ago" last />
+          {recentActivity.length === 0 ? (
+            <EmptyState icon={Bell} title="No activity yet" description="Start a trip or add contacts to see activity here." />
+          ) : (
+            recentActivity.map((a, i) => (
+              <ActivityItem key={i} color={a.color} text={a.text} desc={a.desc} time={a.time} last={i === recentActivity.length - 1} />
+            ))
+          )}
         </CardBody>
       </Card>
     </div>

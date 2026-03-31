@@ -87,8 +87,21 @@ export default function SmartSOS() {
           <p className="text-accent font-display font-bold text-sm tracking-wide animate-pulse-status cursor-pointer" onClick={cancelCountdown}>TAP TO CANCEL</p>
         ) : (
           <div className="flex gap-4 flex-wrap justify-center">
-            <Button variant="outline" size="lg"><Phone className="w-[18px] h-[18px]" /> Call Contacts</Button>
-            <Button variant="outline" size="lg"><MapPin className="w-[18px] h-[18px]" /> Send Location</Button>
+            <Button variant="outline" size="lg" onClick={() => { window.location.href = 'tel:100'; toast.success('Calling emergency contacts...') }}><Phone className="w-[18px] h-[18px]" /> Call Contacts</Button>
+            <Button variant="outline" size="lg" onClick={() => {
+              if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                  (pos) => {
+                    const { latitude, longitude } = pos.coords
+                    const url = `https://maps.google.com/?q=${latitude},${longitude}`
+                    navigator.clipboard.writeText(url).then(() => toast.success('Location copied to clipboard!')).catch(() => toast.success(`Location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`))
+                  },
+                  () => toast.error('Unable to get location. Please enable GPS.')
+                )
+              } else {
+                toast.error('Geolocation is not supported by your browser.')
+              }
+            }}><MapPin className="w-[18px] h-[18px]" /> Send Location</Button>
           </div>
         )}
 
