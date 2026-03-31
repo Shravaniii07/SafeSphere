@@ -2,6 +2,10 @@ const socketHandler = (io) => {
   io.on("connection", (socket) => {
     console.log("User Connected:", socket.id);
 
+    socket.on("join", (userId) => {
+      socket.join(userId);
+    });
+
     // Join tracking room
     socket.on("joinTracking", (trackingId) => {
       socket.join(trackingId);

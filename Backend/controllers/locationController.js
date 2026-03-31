@@ -5,8 +5,7 @@ export const updateLocation = async (req, res) => {
     const { latitude, longitude } = req.body;
 
     const location = await Location.create({
-      // userId: req.user._id,
-      userId: "dummyUser123",
+      userId: req.user._id,
       latitude,
       longitude
     });

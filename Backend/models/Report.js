@@ -19,7 +19,9 @@ const reportSchema = new mongoose.Schema({
     category: {
         type: String,
         enum: ["harassment", "theft", "dark_area", "accident", "other"],
-        required: true
+        required: true,
+        lowercase: true,
+        trim: true
     },
     description: String,
 
