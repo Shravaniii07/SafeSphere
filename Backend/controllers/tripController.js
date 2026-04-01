@@ -1,13 +1,21 @@
 import { createTrip } from "../services/tripServices.js";
 import Trip from "../models/Trip.js";
+import User from "../models/User.js";
+import { sendTripTrackingEmail } from "../services/emailService.js";
 
 export const startTrip = async (req, res) => {
     try {
         const trip = await createTrip(req.user._id, req.body);
 
+        // Notify emergency contacts
+        const user = await User.findById(req.user._id);
+        if (user && user.emergencyContacts && user.emergencyContacts.length > 0) {
+            await sendTripTrackingEmail(user.emergencyContacts, user, trip);
+        }
+
         res.status(201).json({
             success: true,
-            trackingLink: `${process.env.BASE_URL}/track/${trip.trackingId}`,
+            trackingLink: `${process.env.BASE_URL}/api/trip/track/${trip.trackingId}`,
             data: trip,
         });
     } catch (error) {
