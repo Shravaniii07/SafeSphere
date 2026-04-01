@@ -21,13 +21,21 @@ export const updateLocation = async (req, res) => {
 
 export const getLocation = async (req, res) => {
   try {
-    const location = await Location.findOne({
+    // const location = await Location.findOne({
+    //   userId: req.params.userId
+    // }).sort({ timestamp: -1 });
+
+    // res.json({
+    //   success: true,
+    //   location
+    // });
+    const locations = await Location.find({
       userId: req.params.userId
-    }).sort({ timestamp: -1 });
+    }).sort({ createdAt: -1 });
 
     res.json({
       success: true,
-      location
+      locations
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
