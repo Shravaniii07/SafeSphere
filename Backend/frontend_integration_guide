@@ -1,0 +1,97 @@
+# SafeSphere: Backend-to-Frontend Integration Guide
+
+This guide is designed for the frontend development team to understand the current SafeSphere backend API, its request/response structures, and real-time capabilities.
+
+---
+
+## 🛠️ Tech Stack & Authentication
+-   **Base URL**: `http://localhost:5000` (or the deployed instance URL).
+-   **Authentication**: Cookie-based JWT. Ensure the frontend is configured to send `credentials: "include"` (or equivalent) in fetch/axios requests.
+-   **Protocols**: RESTful APIs + Real-time updates via **Socket.io**.
+
+---
+
+## 🔐 1. Authentication (`/api/auth`)
+
+The system uses a secure 2-step verification process via Email OTP.
+
+-   **`POST /register`**: New user registration.
+    -   *Body*: `{ "name", "email", "password" }`
+    -   *Result*: Triggers an OTP email. Must call `verify-otp` to complete.
+-   **`POST /login`**: Logs in an existing user.
+    -   *Body*: `{ "email", "password" }`
+    -   *Result*: Triggers an OTP email. Must call `verify-otp` to receive the session cookie.
+-   **`POST /verify-otp`**: This is the **most important** route. It finalizes the session.
+    -   *Body*: `{ "email", "otp" }`
+    -   *Result*: Sets a `jwt` cookie. Response includes `{ "_id", "name", "email" }`.
+
+---
+
+## 🏃 2. Travel Safety & Tracking (`/api/trip`)
+
+This module manages the journey safety and the real-time tracking links shared with friends.
+
+-   **`POST /start`**: Begins a new journey.
+    -   *Body*: `{ "destination" (String), "eta" (Number in Minutes), "lat", "lng" }`
+    -   *Behavior*: Automatically emails all emergency contacts with the tracking link.
+-   **`POST /update-location`**: Updates the current coordinates during a trip.
+    -   *Body*: `{ "lat", "lng" }`
+    -   *Note*: Only works while a trip is `active`.
+-   **`GET /track/:trackingId`**: **Public Public Public**. This route does NOT require login.
+    -   *Result*: Returns `{ "location": { lat, lng }, "destination", "status" }` for rendering on a shared map.
+
+---
+
+## 🚨 3. SOS & Manual Alerts (`/api/sos`)
+
+-   **`POST /trigger`**: Instant emergency trigger.
+    -   *Body*: `{ "location": { lat, lng } }`
+    -   *Behavior*: Immediately sends emergency emails to all contacts and logs the event in the DB.
+
+---
+
+## 🌍 4. Community Safety Reports (`/api/reports`)
+
+-   **`POST /add`**: Submits a safety report.
+    -   *Body*: `{ "lat", "lng", "category", "description", "severity" }`
+    -   *Categories*: `harassment`, `theft`, `dark_area`, `accident`, `other`.
+    -   *Severity*: 1-5 scale.
+-   **`GET /heatmap`**: Risk analysis for a specific area.
+    -   *Query Params*: `?lat=...&lng=...`
+    -   *Result*: Returns `riskLevel` (safe/medium/risky) based on density and severity of reports in a 3km radius.
+
+---
+
+## 🔔 5. Real-Time Notifications
+
+SafeSphere uses **Socket.io** for instant alerts.
+
+-   **Socket Events**:
+    -   `join (userId)`: Frontend should emit this on mount to receive individual alerts.
+    -   `notification`: Event emitted by the backend when an Admin sends an alert or a safety update occurs.
+-   **`GET /api/notifications`**: Fetches the persistent history of notifications (Alerts, Info, SOS history).
+
+---
+
+## 🛡️ 6. Admin Panel (`/api/admin`)
+
+-   **`GET /users`**: List all registered users (Admin only).
+-   **`POST /create-admin`**: Delegates admin authority to another user.
+    -   *Body*: `{ "name", "email", "password" }`
+-   **`POST /alert`**: Broadcasts a "System Alert" to **all** users simultaneously via both Database and Socket.io.
+
+---
+
+## 📦 Key Data Models for UI
+
+-   **User**: `{ _id, name, email, role, emergencyContacts: [ { name, phone, email } ], medicalConditions }`
+-   **Trip**: `{ _id, user, destination, status: ["active", "completed", "expired"], trackingId }`
+-   **Report**: `{ _id, user, category, severity, location: { coordinates: [lng, lat] } }`
+
+---
+
+> [!TIP]
+> **Frontend Implementation Tip**: When implementing the "Manual SOS" button, ensure you capture the user's current GPS coordinates before calling the API for maximum accuracy.
+
+> [!WARNING]
+> **Important**: The Tracking Link provided by the backend includes the prefix set in `.env` (e.g., `http://localhost:5000/api/trip/track/...`). Ensure your frontend handles the transition to a friendly "Web View" if needed.

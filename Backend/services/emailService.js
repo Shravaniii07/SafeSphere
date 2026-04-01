@@ -83,3 +83,34 @@ export const sendEmergencyAlertEmail = async (contacts, user, details = {}) => {
         }
     }
 };
+// Send Trip Tracking Email
+export const sendTripTrackingEmail = async (contacts, user, trip) => {
+    const subject = `📍 SafeSphere: ${user.name} has started a trip`;
+    const trackingLink = `${process.env.BASE_URL}/api/trip/track/${trip.trackingId}`;
+
+    const message = `
+    📍 TRIP STARTED 📍
+
+    This is an automated notification from SafeSphere.
+    
+    User details:
+    - Name: ${user.name}
+    
+    Trip Details:
+    - Destination: ${trip.destination}
+    
+    You can track their real-time location here:
+    ${trackingLink}
+
+    Please keep an eye on their progress.
+
+    Stay Informed,
+    SafeSphere Application
+    `;
+
+    for (const contact of contacts) {
+        if (contact.email) {
+            await sendEmail(contact.email, subject, message);
+        }
+    }
+};
