@@ -1,5 +1,7 @@
 import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { X, MapPin } from 'lucide-react'
+
 
 /* ═══ Spinner ═══ */
 function Spinner({ className = 'w-4 h-4' }) {
@@ -129,20 +131,29 @@ export function Modal({ isOpen, onClose, title, children, footer }) {
     }
   }, [isOpen, onClose])
   if (!isOpen) return null
-  return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4" style={{ animation: 'modal-overlay-in 0.2s ease' }}>
+  
+  return createPortal(
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 outline-none focus:outline-none" 
+         style={{ animation: 'modal-overlay-in 0.2s ease' }}>
       <div className="absolute inset-0 bg-primary-dark/60 backdrop-blur-md" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-elevated-lg w-full max-w-[440px] p-8" style={{ animation: 'modal-content-in 0.3s cubic-bezier(0.16,1,0.3,1)' }} onClick={e => e.stopPropagation()}>
+      <div className="relative bg-white rounded-2xl shadow-elevated-lg w-full max-w-[440px] p-8" 
+           style={{ animation: 'modal-content-in 0.3s cubic-bezier(0.16,1,0.3,1)' }} 
+           onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-display font-bold text-primary">{title}</h3>
-          <button onClick={onClose} className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-800 transition-all cursor-pointer min-h-[44px] min-w-[44px]"><X className="w-[18px] h-[18px]" /></button>
+          <button onClick={onClose} 
+                  className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-800 transition-all cursor-pointer min-h-[44px] min-w-[44px]">
+            <X className="w-[18px] h-[18px]" />
+          </button>
         </div>
         <div className="mb-6">{children}</div>
         {footer && <div className="flex gap-3 justify-end">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
+
 
 /* ═══ Map Placeholder ═══ */
 export function MapPlaceholder({ label = 'MAP COMPONENT', height = 'min-h-[350px]' }) {

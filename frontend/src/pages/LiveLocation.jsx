@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, Signal, Navigation, Copy, Clock, Wifi } from 'lucide-react'
 import { Card, CardHeader, CardBody, Button, Toggle, MapPlaceholder, Badge } from '../components/UI'
 import toast from 'react-hot-toast'
+import api from '../api/api'
 
 export default function LiveLocation() {
   const [sharing, setSharing] = useState(true)
@@ -11,6 +12,24 @@ export default function LiveLocation() {
   const [error, setError] = useState(null)
   const [watchId, setWatchId] = useState(null)
   const [address, setAddress] = useState('Locating...')
+  
+  const lastSentPosition = useRef(null)
+
+  // Calculate distance between two coordinates in meters
+  const getDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371e3; // metres
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) *
+      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c;
+  }
 
   // Start GPS tracking
   useEffect(() => {
@@ -21,28 +40,27 @@ export default function LiveLocation() {
 
     const id = navigator.geolocation.watchPosition(
       (pos) => {
-        const latitude = pos.coords.latitude
-        const longitude = pos.coords.longitude
+        const { latitude, longitude, accuracy } = pos.coords
 
         setPosition({ lat: latitude, lng: longitude })
-        setAccuracy(Math.round(pos.coords.accuracy))
+        setAccuracy(Math.round(accuracy))
         setLastUpdate(new Date())
         setError(null)
 
-        // 🔥 ADD THIS BLOCK (BACKEND CONNECTION)
-        fetch(`${import.meta.env.VITE_API_URL}/api/location/update`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            latitude,
-            longitude,
-          }),
-        })
-          .then(res => res.json())
-          .then(data => console.log("✅ Sent to backend:", data))
-          .catch(err => console.error("❌ Backend error:", err))
+        // Sync with backend if sharing is enabled and position has changed significantly (> 10m)
+        if (sharing) {
+          const distance = lastSentPosition.current 
+            ? getDistance(latitude, longitude, lastSentPosition.current.lat, lastSentPosition.current.lng)
+            : Infinity;
+
+          if (distance > 10) { // Only send if moved more than 10 meters
+            api.post('/api/location/update', { latitude, longitude })
+              .then(() => {
+                lastSentPosition.current = { lat: latitude, lng: longitude };
+              })
+              .catch(err => console.error("Location sync error:", err))
+          }
+        }
       },
       (err) => setError(err.message),
       { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
@@ -50,7 +68,8 @@ export default function LiveLocation() {
     setWatchId(id)
 
     return () => navigator.geolocation.clearWatch(id)
-  }, [])
+  }, [sharing])
+
 
 // Reverse geocode to get address
 useEffect(() => {

@@ -6,6 +6,7 @@ import { Camera, Mail, Phone as PhoneIcon, MapPin as MapIcon } from 'lucide-reac
 import { Card, CardHeader, CardBody, Button, Input, Toggle, Badge } from '../components/UI'
 import { useApp } from '../context/AppContext'
 import toast from 'react-hot-toast'
+import { useAuth } from '../context/AuthContext';
 
 const profileSchema = z.object({
   name: z.string().min(2, 'Name is required'),
@@ -15,22 +16,25 @@ const profileSchema = z.object({
 })
 
 export default function Profile() {
-  const { user, setUser, settings, setSettings } = useApp()
+  const { user: appUser, setUser, settings, setSettings } = useApp()
+  const { updateProfile } = useAuth()
   const [saving, setSaving] = useState(false)
 
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(profileSchema),
-    defaultValues: { name: user.name, email: user.email, phone: user.phone, location: user.location },
+    defaultValues: { name: appUser.name, email: appUser.email, phone: appUser.phone, location: appUser.location },
   })
 
-  const onSubmit = (data) => {
+  const onSubmit = async (data) => {
     setSaving(true)
-    setTimeout(() => {
-      const initials = data.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
-      setUser(prev => ({ ...prev, ...data, initials }))
-      setSaving(false)
+    try {
+      await updateProfile(data)
       toast.success('Profile updated!')
-    }, 1500)
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const toggleSetting = (key) => {
@@ -50,14 +54,14 @@ export default function Profile() {
             <CardBody>
               <div className="flex items-center gap-6 mb-8">
                 <div className="relative group">
-                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-primary-light text-white flex items-center justify-center text-3xl font-display font-bold shadow-lg">{user.initials}</div>
+                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-primary-light text-white flex items-center justify-center text-3xl font-display font-bold shadow-lg">{appUser.initials}</div>
                   <button className="absolute inset-0 rounded-2xl bg-primary/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
                     <Camera className="w-5 h-5 text-white" />
                   </button>
                 </div>
                 <div>
-                  <h3 className="text-xl font-display font-bold text-primary">{user.name}</h3>
-                  <p className="text-slate-400 text-sm flex items-center gap-1.5 mt-0.5"><Mail className="w-3.5 h-3.5" /> {user.email}</p>
+                  <h3 className="text-xl font-display font-bold text-primary">{appUser.name}</h3>
+                  <p className="text-slate-400 text-sm flex items-center gap-1.5 mt-0.5"><Mail className="w-3.5 h-3.5" /> {appUser.email}</p>
                   <div className="mt-2"><Badge variant="success" dot>Verified</Badge></div>
                 </div>
               </div>

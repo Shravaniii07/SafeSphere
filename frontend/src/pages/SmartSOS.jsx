@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { AlertTriangle, Phone, MapPin, Wifi } from 'lucide-react'
 import { Button, Modal } from '../components/UI'
 import toast from 'react-hot-toast'
+import api from '../api/api'
 
 function HeartbeatLine() {
   return (
@@ -18,6 +19,26 @@ export default function SmartSOS() {
   const [countdown, setCountdown] = useState(null)
   const intervalRef = useRef(null)
   const [bgFlash, setBgFlash] = useState(false)
+
+  const triggerSOSAlert = async () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation not supported')
+      return
+    }
+    
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      const { latitude, longitude } = pos.coords
+      try {
+        await api.post('/api/sos/trigger', { 
+          location: { lat: latitude, lng: longitude } 
+        })
+        toast.success('SOS alert sent! Contacts notified. 🚨')
+        setModalOpen(false)
+      } catch (err) {
+        toast.error(err.response?.data?.message || err.message)
+      }
+    }, () => toast.error('Unable to get location'))
+  }
 
   useEffect(() => {
     if (countdown === null) return
@@ -110,7 +131,7 @@ export default function SmartSOS() {
       </div>
 
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="⚠️ Confirm SOS Alert"
-        footer={<><Button variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button><Button variant="danger" onClick={() => { setModalOpen(false); toast.success('SOS alert sent to all contacts!') }}>Send SOS Alert</Button></>}>
+        footer={<><Button variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button><Button variant="danger" onClick={triggerSOSAlert}>Send SOS Alert</Button></>}>
         <div className="p-4 bg-accent-50 rounded-xl border border-accent/10 mb-4">
           <p className="text-sm text-accent font-medium">This action cannot be undone easily.</p>
         </div>
@@ -121,3 +142,4 @@ export default function SmartSOS() {
     </>
   )
 }
+

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, Globe, Activity, ArrowUpRight, Shield, CheckCircle, MapPin, User, Bell } from 'lucide-react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { AlertTriangle, Globe, Activity, ArrowUpRight, Shield, CheckCircle, MapPin, User, Bell, Search, X } from 'lucide-react'
+
 import { Card, CardHeader, CardBody, Badge, EmptyState } from '../components/UI'
 import { useApp } from '../context/AppContext'
 
@@ -123,10 +124,19 @@ function computeSafetyScore() {
 export default function Dashboard() {
   const { user } = useApp()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const searchQuery = searchParams.get('search') || ''
+
   const [contactCount, setContactCount] = useState(getContactCount)
   const [tripCount, setTripCount] = useState(() => getTripHistory().length)
   const [safetyScore, setSafetyScore] = useState(computeSafetyScore)
   const [recentActivity, setRecentActivity] = useState(getRecentActivity)
+
+  const filteredActivity = recentActivity.filter(a => 
+    a.text.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    a.desc.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
 
   // Refresh data when page is focused (user navigates back)
   useEffect(() => {
@@ -181,19 +191,41 @@ export default function Dashboard() {
       {/* Recent Activity — pulled from real trips & contacts */}
       <Card>
         <CardHeader>
-          <h3 className="text-[15px] font-display font-bold text-primary">Recent Activity</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-[15px] font-display font-bold text-primary">Recent Activity</h3>
+            {searchQuery && (
+              <Badge variant="secondary" className="font-mono text-[10px]">
+                Search: {searchQuery}
+                <button onClick={() => setSearchParams({})} className="ml-1.5 hover:text-accent transition-colors"><X className="w-2.5 h-2.5" /></button>
+              </Badge>
+            )}
+          </div>
           <Badge dot>Today</Badge>
         </CardHeader>
         <CardBody className="stagger-children">
-          {recentActivity.length === 0 ? (
-            <EmptyState icon={Bell} title="No activity yet" description="Start a trip or add contacts to see activity here." />
+          {filteredActivity.length === 0 ? (
+            <EmptyState 
+              icon={searchQuery ? Search : Bell} 
+              title={searchQuery ? "No matches found" : "No activity yet"} 
+              description={searchQuery ? `We couldn't find anything matching "${searchQuery}"` : "Start a trip or add contacts to see activity here."}
+            >
+              {searchQuery && (
+                <button 
+                  onClick={() => setSearchParams({})}
+                  className="mt-4 text-sm font-medium text-secondary hover:text-secondary-dark flex items-center gap-2 mx-auto transition-colors cursor-pointer"
+                >
+                  Clear search and show all
+                </button>
+              )}
+            </EmptyState>
           ) : (
-            recentActivity.map((a, i) => (
-              <ActivityItem key={i} color={a.color} text={a.text} desc={a.desc} time={a.time} last={i === recentActivity.length - 1} />
+            filteredActivity.map((a, i) => (
+              <ActivityItem key={i} color={a.color} text={a.text} desc={a.desc} time={a.time} last={i === filteredActivity.length - 1} />
             ))
           )}
         </CardBody>
       </Card>
+
     </div>
   )
 }

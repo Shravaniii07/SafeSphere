@@ -45,13 +45,18 @@ export const trackTrip = async (req, res) => {
             trackingId: req.params.trackingId,
         });
 
+        if (!trip) {
+            return res.status(404).json({ success: false, message: "Tracking not found" });
+        }
+
         res.json({
+            success: true,
             location: trip.currentLocation,
             destination: trip.destination,
             status: trip.status,
         });
     } catch (error) {
-        res.status(500).json({ success: false });
+        res.status(500).json({ success: false, message: "Server error" });
     }
 };
 
@@ -62,3 +67,21 @@ export const getRecentTrips = async (req, res) => {
 
     res.json({ success: true, data: trips });
 };
+
+export const endTrip = async (req, res) => {
+    try {
+        const trip = await Trip.findOneAndUpdate(
+            { user: req.user._id, status: "active" },
+            { status: "completed", endTime: new Date() },
+            { new: true }
+        );
+
+        if (!trip) {
+            return res.status(404).json({ success: false, message: "No active trip found to end" });
+        }
+
+        res.json({ success: true, message: "Trip ended successfully", data: trip });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};

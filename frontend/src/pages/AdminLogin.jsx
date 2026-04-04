@@ -16,7 +16,7 @@ const adminSchema = z.object({
 export default function AdminLogin() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const { adminLogin } = useAuth()
+  const { login } = useAuth()  // use same login() which triggers OTP
   const navigate = useNavigate()
 
   const { register, handleSubmit, formState: { errors } } = useForm({
@@ -27,9 +27,11 @@ export default function AdminLogin() {
   const onSubmit = async (data) => {
     setIsLoading(true)
     try {
-      await adminLogin(data.email, data.password, data.secretKey)
-      toast.success('Admin access granted ✅')
-      navigate('/admin/dashboard', { replace: true })
+      // Admin uses the same OTP flow as users — /api/auth/login triggers OTP email
+      await login(data.email, data.password)
+      toast.success('OTP sent! Check your email 📧')
+      // Navigate to verify-otp with isAdmin=true so it redirects to /admin/dashboard
+      navigate('/verify-otp', { state: { email: data.email, isAdmin: true } })
     } catch (err) {
       toast.error(err.message || 'Authentication failed')
     } finally {
@@ -159,3 +161,7 @@ export default function AdminLogin() {
     </div>
   )
 }
+
+
+
+

@@ -27,8 +27,8 @@ export default function UserLogin() {
     setIsLoading(true)
     try {
       await login(data.email, data.password)
-      toast.success('Welcome back! 🎉')
-      navigate('/dashboard', { replace: true })
+      toast.success('Check your email for OTP! 📧')
+      navigate('/verify-otp', { state: { email: data.email } })
     } catch (err) {
       toast.error(err.message || 'Login failed')
     } finally {

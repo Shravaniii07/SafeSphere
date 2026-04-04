@@ -19,10 +19,11 @@ export default function Navbar({ title, onBurgerClick }) {
 
   const handleSearch = (e) => {
     if (e.key === 'Enter' && searchQuery.trim()) {
-      toast.success(`Searching for "${searchQuery}"...`)
+      navigate(`/dashboard?search=${encodeURIComponent(searchQuery.trim())}`)
       setSearchQuery('')
     }
   }
+
 
   return (
     <header className="h-16 bg-white/80 backdrop-blur-xl border-b border-slate-100/60 flex items-center justify-between px-4 lg:px-8 sticky top-0 z-50">

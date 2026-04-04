@@ -15,6 +15,10 @@ const trackingSchema = new mongoose.Schema(
             type: Boolean,
             default: true,
         },
+        location: {
+            lat: Number,
+            lng: Number,
+        },
         expiresAt: Date,
     },
     { timestamps: true }

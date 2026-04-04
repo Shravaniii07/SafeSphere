@@ -32,8 +32,8 @@ export default function RegisterPage() {
     setIsLoading(true)
     try {
       await authRegister(data.name, data.email, data.password)
-      toast.success('Account created! Welcome to SafeSphere 🎉')
-      navigate('/dashboard', { replace: true })
+      toast.success('Success! Please verify your email 📧')
+      navigate('/verify-otp', { state: { email: data.email } })
     } catch (err) {
       toast.error(err.message || 'Registration failed')
     } finally {

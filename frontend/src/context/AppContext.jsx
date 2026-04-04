@@ -30,11 +30,11 @@ export function AppProvider({ children }) {
   // Sync user profile from auth context
   useEffect(() => {
     if (authUser) {
+      const getInitials = (name) => name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || 'U'
       setUser(prev => ({
         ...prev,
-        name: authUser.name || prev.name,
-        initials: authUser.initials || prev.initials,
-        email: authUser.email || prev.email,
+        ...authUser,
+        initials: getInitials(authUser.name),
         isAdmin: role === 'admin',
       }))
     }

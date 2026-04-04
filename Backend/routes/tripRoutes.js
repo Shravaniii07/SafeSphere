@@ -4,7 +4,9 @@ import {
     updateLocation,
     trackTrip,
     getRecentTrips,
+    endTrip
 } from "../controllers/tripController.js";
+
 
 import { protect } from "../middleware/authMiddleware.js";
 
@@ -12,7 +14,9 @@ const router = express.Router();
 
 router.post("/start", protect, startTrip);
 router.post("/update-location", protect, updateLocation);
+router.post("/end", protect, endTrip);
 router.get("/recent", protect, getRecentTrips);
+
 
 
 // public

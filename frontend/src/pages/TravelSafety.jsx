@@ -1,28 +1,19 @@
 import { useState, useEffect, useRef } from 'react'
-import { Play, Route, Square, Clock, Navigation, MapPin, Shield, AlertTriangle, CheckCircle, History } from 'lucide-react'
+import { Play, Route, Square, Clock, Navigation, MapPin, Shield, CheckCircle, History } from 'lucide-react'
 import { Card, CardHeader, CardBody, Button, Input, Toggle, Badge, EmptyState } from '../components/UI'
 import toast from 'react-hot-toast'
+import api from '../api/api'
 
-const TRIPS_KEY = 'safesphere_trips'
-
-function loadTrips() {
-  try {
-    const stored = localStorage.getItem(TRIPS_KEY)
-    if (stored) return JSON.parse(stored)
-  } catch { /* ignore */ }
-  return []
-}
-
-function saveTrips(trips) {
-  try { localStorage.setItem(TRIPS_KEY, JSON.stringify(trips)) } catch { /* ignore */ }
-}
-
-// Haversine distance between two lat/lng points in km
+// ─── Haversine distance (km) ───────────────────────────────────────────────
 function haversine(lat1, lon1, lat2, lon2) {
   const R = 6371
   const dLat = (lat2 - lat1) * Math.PI / 180
   const dLon = (lon2 - lon1) * Math.PI / 180
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) *
+    Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) ** 2
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
@@ -30,6 +21,20 @@ function safetyScoreFromDistance(km) {
   if (km < 5) return { label: 'High', color: 'text-emerald-600' }
   if (km < 20) return { label: 'Medium', color: 'text-amber-600' }
   return { label: 'Use Caution', color: 'text-accent' }
+}
+
+function formatElapsed(secs) {
+  const h = Math.floor(secs / 3600)
+  const m = Math.floor((secs % 3600) / 60)
+  const s = secs % 60
+  return h > 0
+    ? `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+    : `${m}:${s.toString().padStart(2, '0')}`
+}
+
+function formatDuration(secs) {
+  const m = Math.floor(secs / 60)
+  return m < 60 ? `${m} min` : `${Math.floor(m / 60)}h ${m % 60}m`
 }
 
 export default function TravelSafety() {
@@ -40,18 +45,25 @@ export default function TravelSafety() {
   const [deviation, setDeviation] = useState(true)
   const [starting, setStarting] = useState(false)
 
-  // Trip state
   const [tripActive, setTripActive] = useState(false)
-  const [tripData, setTripData] = useState(null) // { from, to, startTime, fromCoords, toCoords, distance, eta }
+  const [tripData, setTripData] = useState(null)
   const [elapsed, setElapsed] = useState(0)
   const [currentPosition, setCurrentPosition] = useState(null)
+
+  const [tripHistory, setTripHistory] = useState([])
+
   const elapsedRef = useRef(null)
   const watchRef = useRef(null)
+  const syncIntervalRef = useRef(null)
 
-  // Trip history
-  const [tripHistory, setTripHistory] = useState(loadTrips)
+  // ── Fetch trip history on mount ────────────────────────────────────────
+  useEffect(() => {
+    api.get('/api/trip/recent')
+      .then(res => setTripHistory(res.data.data || []))
+      .catch(err => console.error('History fetch error:', err))
+  }, [])
 
-  // Live GPS position tracking
+  // ── Get initial GPS position ───────────────────────────────────────────
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -62,14 +74,14 @@ export default function TravelSafety() {
     }
   }, [])
 
-  // Auto-fill "From" with current location
+  // ── Auto-fill "From" with current GPS ─────────────────────────────────
   useEffect(() => {
     if (currentPosition && !from) {
       setFrom(`${currentPosition.lat.toFixed(4)}°N, ${currentPosition.lng.toFixed(4)}°E (Current Location)`)
     }
   }, [currentPosition, from])
 
-  // Elapsed timer
+  // ── Elapsed timer ─────────────────────────────────────────────────────
   useEffect(() => {
     if (tripActive) {
       elapsedRef.current = setInterval(() => setElapsed(prev => prev + 1), 1000)
@@ -78,32 +90,58 @@ export default function TravelSafety() {
     return () => clearInterval(elapsedRef.current)
   }, [tripActive])
 
-  // Watch position during active trip
+  // ── Watch position + sync to backend during active trip ───────────────
   useEffect(() => {
     if (tripActive && navigator.geolocation) {
       watchRef.current = navigator.geolocation.watchPosition(
-        (pos) => setCurrentPosition({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        (pos) => {
+          const lat = pos.coords.latitude
+          const lng = pos.coords.longitude
+          setCurrentPosition({ lat, lng })
+        },
         () => {},
         { enableHighAccuracy: true }
       )
-      return () => navigator.geolocation.clearWatch(watchRef.current)
+
+      // Sync location to backend every 10s
+      syncIntervalRef.current = setInterval(() => {
+        setCurrentPosition(pos => {
+          if (pos) {
+            api.post('/api/trip/update-location', { lat: pos.lat, lng: pos.lng })
+              .catch(err => console.error('Location sync error:', err))
+          }
+          return pos
+        })
+      }, 10000)
+
+      return () => {
+        navigator.geolocation.clearWatch(watchRef.current)
+        clearInterval(syncIntervalRef.current)
+      }
     }
   }, [tripActive])
 
+  // ── Geocode a place name via Nominatim ─────────────────────────────────
   const geocodePlaceName = async (place) => {
-    // Use Nominatim (free OpenStreetMap geocoder)
+    if (!place || place.includes('°')) return null
     try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(place)}&limit=1`, {
-        headers: { 'Accept-Language': 'en' }
-      })
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(place)}&limit=1`,
+        { headers: { 'Accept-Language': 'en' } }
+      )
       const data = await res.json()
       if (data.length > 0) {
-        return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), name: data[0].display_name.split(',').slice(0, 2).join(', ') }
+        return {
+          lat: parseFloat(data[0].lat),
+          lng: parseFloat(data[0].lon),
+          name: data[0].display_name.split(',').slice(0, 2).join(', ')
+        }
       }
     } catch { /* ignore */ }
     return null
   }
 
+  // ── Start trip ─────────────────────────────────────────────────────────
   const startTrip = async () => {
     if (!from.trim() || !to.trim()) {
       toast.error('Please enter both From and To locations')
@@ -112,83 +150,87 @@ export default function TravelSafety() {
 
     setStarting(true)
 
-    // Geocode both locations
+    const fromNameForGeo = from.includes('°') ? '' : from
     const [fromGeo, toGeo] = await Promise.all([
-      geocodePlaceName(from.replace(/\(Current Location\)/i, '').trim().includes('°') ? '' : from),
+      geocodePlaceName(fromNameForGeo),
       geocodePlaceName(to),
     ])
 
-    // Use current GPS or geocoded coords for source
     const fromCoords = currentPosition || (fromGeo ? { lat: fromGeo.lat, lng: fromGeo.lng } : null)
     const toCoords = toGeo ? { lat: toGeo.lat, lng: toGeo.lng } : null
 
-    if (!toCoords) {
-      toast.error('Could not find destination. Try a more specific address.')
+    if (!toCoords || !fromCoords) {
+      toast.error('Could not determine locations. Try entering city names.')
       setStarting(false)
       return
     }
 
-    const distance = fromCoords ? haversine(fromCoords.lat, fromCoords.lng, toCoords.lat, toCoords.lng) : 0
-    const etaMinutes = Math.round(distance / 0.5) // ~30 km/h average speed in city
+    const distance = haversine(fromCoords.lat, fromCoords.lng, toCoords.lat, toCoords.lng)
+    const etaMinutes = Math.round(distance / 0.5) // ~30 km/h average
 
-    const trip = {
-      from: fromGeo?.name || from,
-      to: toGeo?.name || to,
-      fromCoords,
-      toCoords,
-      distance: distance.toFixed(1),
-      eta: etaMinutes,
-      startTime: Date.now(),
+    try {
+      console.log('[TravelSafety] Starting trip:', { destination: toGeo?.name || to, etaMinutes, fromCoords })
+      const res = await api.post('/api/trip/start', {
+        destination: toGeo?.name || to,
+        eta: etaMinutes,
+        lat: fromCoords.lat,
+        lng: fromCoords.lng
+      })
+
+      const data = res.data.data
+      console.log('[TravelSafety] Trip started:', data)
+
+      setTripData({
+        from: fromGeo?.name || from,
+        to: toGeo?.name || to,
+        distance: distance.toFixed(1),
+        eta: etaMinutes,
+        startTime: Date.now(),
+        trackingId: data?.trackingId
+      })
+      setTripActive(true)
+      setElapsed(0)
+      toast.success('Trip started! Emergency contacts notified. ✅')
+    } catch (err) {
+      console.error('[TravelSafety] Start trip error:', err)
+      toast.error(err.message || 'Failed to start trip')
+    } finally {
+      setStarting(false)
     }
+  }
 
-    setTripData(trip)
-    setTripActive(true)
-    setElapsed(0)
-    setStarting(false)
+  // ── End trip ───────────────────────────────────────────────────────────
+  const endTrip = async () => {
+    try {
+      // ✅ Call backend to end trip
+      const res = await api.post('/api/trip/end')
+      if (res.data.success) {
+        toast.success('Trip completed safely! ✅')
+      }
+    } catch (err) {
+      console.error('Failed to end trip on backend:', err)
+      toast.error('Trip ended locally, but server update failed')
+    } finally {
+      // Clean up local state regardless of server success
+      clearInterval(elapsedRef.current)
+      if (watchRef.current) navigator.geolocation.clearWatch(watchRef.current)
+      if (syncIntervalRef.current) clearInterval(syncIntervalRef.current)
 
-    if (autoShare) {
-      toast.success('Trip started! Contacts notified with your route.')
-    } else {
-      toast.success('Trip started! Tracking your journey.')
+      setTripActive(false)
+      setTripData(null)
+      setElapsed(0)
+
+      // Refresh history
+      api.get('/api/trip/recent')
+        .then(res => setTripHistory(res.data.data || []))
+        .catch(err => console.error('History fetch error:', err))
     }
   }
 
-  const endTrip = () => {
-    clearInterval(elapsedRef.current)
-    if (watchRef.current) navigator.geolocation.clearWatch(watchRef.current)
 
-    const completedTrip = {
-      ...tripData,
-      endTime: Date.now(),
-      duration: elapsed,
-      status: 'completed',
-    }
-
-    const updated = [completedTrip, ...tripHistory].slice(0, 10) // keep last 10
-    setTripHistory(updated)
-    saveTrips(updated)
-
-    setTripActive(false)
-    setTripData(null)
-    setElapsed(0)
-    toast.success('Trip completed safely! ✅')
-  }
-
-  const formatElapsed = (secs) => {
-    const h = Math.floor(secs / 3600)
-    const m = Math.floor((secs % 3600) / 60)
-    const s = secs % 60
-    return h > 0
-      ? `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
-      : `${m}:${s.toString().padStart(2, '0')}`
-  }
-
-  const formatDuration = (secs) => {
-    const m = Math.floor(secs / 60)
-    return m < 60 ? `${m} min` : `${Math.floor(m / 60)}h ${m % 60}m`
-  }
-
-  const safety = tripData ? safetyScoreFromDistance(parseFloat(tripData.distance)) : { label: 'N/A', color: 'text-slate-400' }
+  const safety = tripData
+    ? safetyScoreFromDistance(parseFloat(tripData.distance))
+    : { label: 'N/A', color: 'text-slate-400' }
 
   return (
     <div className="stagger-children">
@@ -202,6 +244,7 @@ export default function TravelSafety() {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-8 space-y-6">
+
           {/* Start / Active Trip Card */}
           <Card>
             <CardHeader>
@@ -225,7 +268,9 @@ export default function TravelSafety() {
                     <Input label="From" placeholder="Your starting location" icon={Navigation} value={from} onChange={e => setFrom(e.target.value)} />
                     <Input label="To" placeholder="Where are you going?" icon={MapPin} value={to} onChange={e => setTo(e.target.value)} />
                   </div>
-                  <Button size="lg" full isLoading={starting} onClick={startTrip}><Play className="w-5 h-5" /> Start Trip</Button>
+                  <Button size="lg" full isLoading={starting} onClick={startTrip}>
+                    <Play className="w-5 h-5" /> Start Trip
+                  </Button>
                 </>
               ) : (
                 <>
@@ -280,12 +325,17 @@ export default function TravelSafety() {
                         <CheckCircle className="w-5 h-5 text-emerald-500" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-primary truncate">{trip.from.split(',')[0]} → {trip.to.split(',')[0]}</p>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          {trip.distance} km · {formatDuration(trip.duration)} · {new Date(trip.startTime).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                        <p className="text-sm font-semibold text-primary truncate">
+                          {trip.destination || 'Unknown Destination'}
+                        </p>
+                        <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
+                          <span className={`inline-block w-1.5 h-1.5 rounded-full ${trip.status === 'active' ? 'bg-emerald-500' : trip.status === 'completed' ? 'bg-secondary' : 'bg-slate-400'}`} />
+                          {trip.status} · {new Date(trip.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>
-                      <Badge variant="success" dot>Safe</Badge>
+                      <Badge variant={trip.status === 'active' ? 'success' : 'primary'} dot>
+                        {trip.status === 'active' ? 'Active' : trip.status === 'completed' ? 'Done' : 'Expired'}
+                      </Badge>
                     </div>
                   ))}
                 </div>
@@ -336,7 +386,7 @@ export default function TravelSafety() {
             </CardBody>
           </Card>
 
-          {/* Live coordinates card */}
+          {/* Live coordinates */}
           {currentPosition && (
             <Card>
               <CardBody>
