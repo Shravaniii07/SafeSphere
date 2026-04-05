@@ -7,7 +7,7 @@ import toast from 'react-hot-toast'
 
 export default function Navbar({ title, onBurgerClick }) {
   const { user } = useApp()
-  const { logout } = useAuth()
+  const { logout, role } = useAuth()
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -51,9 +51,11 @@ export default function Navbar({ title, onBurgerClick }) {
           <Bell className="w-[19px] h-[19px]" />
           {user.unreadNotifications > 0 && <span className="absolute top-1.5 right-1.5 w-4 h-4 text-[9px] font-bold bg-accent text-white rounded-full flex items-center justify-center shadow-[0_2px_4px_rgba(244,63,94,0.3)]">{user.unreadNotifications}</span>}
         </button>
-        <button onClick={() => navigate('/sos')} className="px-4 py-2 bg-accent text-white rounded-xl text-sm font-display font-semibold flex items-center gap-2 hover:bg-accent-dark hover:-translate-y-px active:scale-[0.96] transition-all duration-200 animate-sos-glow cursor-pointer min-h-[44px]" aria-label="Emergency SOS">
-          <AlertTriangle className="w-4 h-4" /><span className="hidden sm:inline">SOS</span>
-        </button>
+        {role !== 'admin' && (
+          <button onClick={() => navigate('/sos')} className="px-4 py-2 bg-accent text-white rounded-xl text-sm font-display font-semibold flex items-center gap-2 hover:bg-accent-dark hover:-translate-y-px active:scale-[0.96] transition-all duration-200 animate-sos-glow cursor-pointer min-h-[44px]" aria-label="Emergency SOS">
+            <AlertTriangle className="w-4 h-4" /><span className="hidden sm:inline">SOS</span>
+          </button>
+        )}
         <button onClick={handleLogout} className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:bg-accent-50 hover:text-accent transition-all duration-200 cursor-pointer min-h-[44px] min-w-[44px]" aria-label="Logout" title="Logout">
           <LogOut className="w-[18px] h-[18px]" />
         </button>

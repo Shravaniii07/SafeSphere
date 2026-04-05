@@ -104,7 +104,10 @@ export default function EmergencyContacts() {
 
   const handleAddContact = async (e) => {
     e.preventDefault()
-    if (!newContact.name || !newContact.phone) return
+    if (!newContact.name || !newContact.phone || !newContact.email) {
+      toast.error('Name, phone, and email are required')
+      return
+    }
     try {
       await api.post('/api/user/contacts', newContact)
       toast.success('Contact added!')
@@ -181,9 +184,9 @@ export default function EmergencyContacts() {
           </div>
           
           <form onSubmit={handleAddContact} className="flex flex-wrap gap-3 p-4 bg-white/50 rounded-xl border border-dashed border-secondary/30">
-            <input type="text" placeholder="Name" value={newContact.name} onChange={e => setNewContact({...newContact, name: e.target.value})} className="px-3 py-2 text-sm border border-slate-200 rounded-lg flex-1 min-w-[150px]" />
-            <input type="text" placeholder="Phone" value={newContact.phone} onChange={e => setNewContact({...newContact, phone: e.target.value})} className="px-3 py-2 text-sm border border-slate-200 rounded-lg flex-1 min-w-[150px]" />
-            <input type="email" placeholder="Email (optional)" value={newContact.email} onChange={e => setNewContact({...newContact, email: e.target.value})} className="px-3 py-2 text-sm border border-slate-200 rounded-lg flex-1 min-w-[120px]" />
+            <input type="text" placeholder="Name" required value={newContact.name} onChange={e => setNewContact({...newContact, name: e.target.value})} className="px-3 py-2 text-sm border border-slate-200 rounded-lg flex-1 min-w-[150px]" />
+            <input type="text" placeholder="Phone" required value={newContact.phone} onChange={e => setNewContact({...newContact, phone: e.target.value})} className="px-3 py-2 text-sm border border-slate-200 rounded-lg flex-1 min-w-[150px]" />
+            <input type="email" placeholder="Email" required value={newContact.email} onChange={e => setNewContact({...newContact, email: e.target.value})} className="px-3 py-2 text-sm border border-slate-200 rounded-lg flex-1 min-w-[120px]" />
             <Button type="submit" size="sm" variant="secondary"><Plus className="w-4 h-4" /> Add</Button>
           </form>
         </CardBody>

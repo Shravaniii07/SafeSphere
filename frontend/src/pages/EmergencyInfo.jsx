@@ -17,6 +17,7 @@ const medicalSchema = z.object({
 const contactSchema = z.object({
   contactName: z.string().min(2, 'Name must be at least 2 characters'),
   phone: z.string().regex(/^[+]?[0-9\s\-]{10,15}$/, 'Enter a valid phone number (min 10 digits)'),
+  email: z.string().email('Enter a valid email address'),
   relationship: z.string().min(1, 'Please select a relationship'),
 })
 
@@ -68,7 +69,7 @@ export default function EmergencyInfo() {
     setValue: setConValue,
   } = useForm({
     resolver: zodResolver(contactSchema),
-    defaultValues: { contactName: '', phone: '', relationship: '' },
+    defaultValues: { contactName: '', phone: '', email: '', relationship: '' },
   })
 
   // ── Load contacts from backend ─────────────────────────────────────────
@@ -128,7 +129,7 @@ export default function EmergencyInfo() {
   // ── Open Add modal ─────────────────────────────────────────────────────
   const openAddModal = () => {
     setEditContactId(null)
-    resetContact({ contactName: '', phone: '', relationship: '' })
+    resetContact({ contactName: '', phone: '', email: '', relationship: '' })
     setModalOpen(true) // open AFTER resetting — state is batched correctly
   }
 
@@ -137,7 +138,8 @@ export default function EmergencyInfo() {
     setEditContactId(contact._id)
     setConValue('contactName', contact.name)
     setConValue('phone', contact.phone)
-    setConValue('relationship', contact.email || '') // rel stored in email field from this page
+    setConValue('email', contact.email || '')
+    setConValue('relationship', contact.relationship || '')
     setModalOpen(true)
   }
 
@@ -151,7 +153,8 @@ export default function EmergencyInfo() {
         await api.post('/api/user/contacts', {
           name: data.contactName,
           phone: data.phone,
-          email: data.relationship, // store relationship in email field
+          email: data.email,
+          relationship: data.relationship,
         })
         toast.success('Contact updated!')
       } else {
@@ -160,7 +163,8 @@ export default function EmergencyInfo() {
         await api.post('/api/user/contacts', {
           name: data.contactName,
           phone: data.phone,
-          email: data.relationship, // store relationship in email field
+          email: data.email,
+          relationship: data.relationship,
         })
         toast.success('Contact added!')
       }
@@ -284,7 +288,9 @@ export default function EmergencyInfo() {
 
                       {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <h5 className="text-sm font-semibold text-primary truncate">{c.name}</h5>
+                        <h5 className="text-sm font-semibold text-primary truncate">
+                          {c.name} {c.relationship && <span className="font-normal text-slate-400 text-xs">({c.relationship})</span>}
+                        </h5>
                         {/* ✅ CALL FUNCTION: tel: link opens device dialer */}
                         <a
                           href={`tel:${c.phone.replace(/\s/g, '')}`}
@@ -293,9 +299,7 @@ export default function EmergencyInfo() {
                           <Phone className="w-3 h-3" />
                           {c.phone}
                         </a>
-                        {c.email && (
-                          <p className="text-xs text-slate-400">{c.email}</p>
-                        )}
+                        <p className="text-xs text-slate-400 truncate">{c.email}</p>
                       </div>
 
                       {/* Actions */}
@@ -357,6 +361,13 @@ export default function EmergencyInfo() {
             placeholder="+91 XXXXX XXXXX"
             {...regContact('phone')}
             error={conErrors.phone?.message}
+          />
+          <Input
+            label="Email"
+            type="email"
+            placeholder="contact@example.com"
+            {...regContact('email')}
+            error={conErrors.email?.message}
           />
           <Select
             label="Relationship"

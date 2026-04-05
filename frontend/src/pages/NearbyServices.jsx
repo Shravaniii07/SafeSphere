@@ -20,13 +20,11 @@ const filters = [
   { id: 'all', label: 'All', icon: LayoutGrid },
   { id: 'hospital', label: 'Hospitals', icon: Activity },
   { id: 'police', label: 'Police', icon: MapPin },
-  { id: 'fire', label: 'Fire Station', icon: Zap },
 ]
 
 const typeConfig = {
   hospital: { color: 'bg-accent/10 text-accent', icon: Activity },
   police: { color: 'bg-primary-100 text-primary', icon: MapPin },
-  fire: { color: 'bg-amber-50 text-amber-600', icon: Zap },
 }
 
 // distance
@@ -75,14 +73,13 @@ export default function NearbyServices() {
       setLoading(true)
 
       const { lat, lng } = position
-      const radius = 5000 // 🔥 increased so fire stations show better
+      const radius = 5000 
 
       const query = `
         [out:json][timeout:10];
         (
           node["amenity"="hospital"](around:${radius},${lat},${lng});
           node["amenity"="police"](around:${radius},${lat},${lng});
-          node["amenity"="fire_station"](around:${radius},${lat},${lng});
         );
         out body;
       `
@@ -115,7 +112,6 @@ export default function NearbyServices() {
 
             let type = 'hospital'
             if (amenity === 'police') type = 'police'
-            if (amenity === 'fire_station') type = 'fire'
 
             const cfg = typeConfig[type]
 
@@ -162,7 +158,8 @@ export default function NearbyServices() {
   const filtered = active === 'all' ? places : places.filter(p => p.type === active)
 
   const openDirections = (place) => {
-    window.open(`https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}`, '_blank')
+    if (!position) return
+    window.open(`https://www.google.com/maps/dir/?api=1&origin=${position.lat},${position.lng}&destination=${place.lat},${place.lng}`, '_blank')
   }
 
   return (
@@ -215,8 +212,7 @@ export default function NearbyServices() {
                   <Popup>
                     <strong>{p.name}</strong><br />
                     {p.type === 'hospital' && '🏥'}
-                    {p.type === 'police' && '👮'}
-                    {p.type === 'fire' && '🚒'}<br />
+                    {p.type === 'police' && '👮'}<br />
                     {p.dist}
                   </Popup>
                 </Marker>

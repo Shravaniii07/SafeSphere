@@ -22,22 +22,22 @@ const delays = [
 ]
 
 // Simple Web Audio ringtone generator
-function createRingtone(audioCtx) {
+function createRingtone(audioCtx, masterGain) {
   const osc1 = audioCtx.createOscillator()
   const osc2 = audioCtx.createOscillator()
-  const gainNode = audioCtx.createGain()
+  const pulseGain = audioCtx.createGain()
 
   osc1.type = 'sine'
   osc1.frequency.value = 440
   osc2.type = 'sine'
   osc2.frequency.value = 480
 
-  osc1.connect(gainNode)
-  osc2.connect(gainNode)
-  gainNode.connect(audioCtx.destination)
-  gainNode.gain.value = 0.15
+  osc1.connect(pulseGain)
+  osc2.connect(pulseGain)
+  pulseGain.connect(masterGain)
+  pulseGain.gain.value = 0.15
 
-  return { osc1, osc2, gainNode }
+  return { osc1, osc2, pulseGain }
 }
 
 export default function FakeCall() {
@@ -50,10 +50,10 @@ export default function FakeCall() {
   const [isMuted, setIsMuted] = useState(false)
   const [isSpeaker, setIsSpeaker] = useState(false)
   const audioRef = useRef(null)
+  const masterGainRef = useRef(null)
   const countdownRef = useRef(null)
   const callTimerRef = useRef(null)
   const ringIntervalRef = useRef(null)
-  const oscStopTimersRef = useRef([]) // track pending osc stop-timers
 
   const displayName = customName || callerName
 
@@ -68,41 +68,52 @@ export default function FakeCall() {
   }, [])
 
   const startRingtone = useCallback(() => {
+    // 1. Safety first: stop any existing context
+    stopRingtone()
+
     try {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+      const masterGain = audioCtx.createGain()
+      
+      masterGain.connect(audioCtx.destination)
+      
       audioRef.current = audioCtx
+      masterGainRef.current = masterGain
 
       const playRing = () => {
-        // Guard: don't play if context is already closed
+        // Guard: don't play if context is already closed or suspended
         if (audioCtx.state === 'closed') return
-        const { osc1, osc2, gainNode } = createRingtone(audioCtx)
-        osc1.start()
-        osc2.start()
-        // Track the stop-timer so we can cancel it on stopRingtone
-        const timerId = setTimeout(() => {
-          try { osc1.stop() } catch { /* already stopped */ }
-          try { osc2.stop() } catch { /* already stopped */ }
-          // Remove from tracking array
-          oscStopTimersRef.current = oscStopTimersRef.current.filter(id => id !== timerId)
-        }, 1000)
-        oscStopTimersRef.current.push(timerId)
+        const { osc1, osc2 } = createRingtone(audioCtx, masterGain)
+        const now = audioCtx.currentTime
+        osc1.start(now)
+        osc2.start(now)
+        osc1.stop(now + 1)
+        osc2.stop(now + 1)
       }
 
       playRing()
       ringIntervalRef.current = setInterval(playRing, 2500)
-    } catch {
-      // Audio not available
+    } catch (e) {
+      console.error('Audio initialization failed:', e)
     }
   }, [])
 
   const stopRingtone = useCallback(() => {
-    // 1. Stop the ring interval so no new oscillators are created
-    clearInterval(ringIntervalRef.current)
-    ringIntervalRef.current = null
-    // 2. Cancel all pending oscillator stop-timers
-    oscStopTimersRef.current.forEach(id => clearTimeout(id))
-    oscStopTimersRef.current = []
-    // 3. Close and discard the AudioContext
+    // 1. Stop the ring interval
+    if (ringIntervalRef.current) {
+      clearInterval(ringIntervalRef.current)
+      ringIntervalRef.current = null
+    }
+
+    // 2. Kill audio via Master Gain (Instant)
+    if (masterGainRef.current) {
+      try {
+        masterGainRef.current.disconnect()
+      } catch (e) { /* already disconnected */ }
+      masterGainRef.current = null
+    }
+
+    // 3. Close and discard the AudioContext (Cleanup)
     if (audioRef.current && audioRef.current.state !== 'closed') {
       audioRef.current.close().catch(() => {})
       audioRef.current = null

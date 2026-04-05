@@ -28,7 +28,6 @@ const navItems = [
   { section: 'Account' },
   { id: '/notifications', label: 'Notifications', icon: Bell },
   { id: '/profile', label: 'Profile', icon: User },
-  { id: '/heatmap', label: 'Safety Heatmap', icon: Map },
   { id: '/admin/dashboard', label: 'Admin Panel', icon: Shield, adminOnly: true },
 ]
 
@@ -44,6 +43,10 @@ export default function Sidebar({ isOpen, onClose }) {
     onClose?.()
   }
 
+  const filteredNavItems = role === 'admin' 
+    ? navItems.filter(item => item.id === '/admin/dashboard' || item.id === '/profile').map(item => item.id === '/admin/dashboard' ? { ...item, label: 'Admin Panel' } : item)
+    : navItems;
+
   return (
     <aside className={`w-[272px] fixed top-0 left-0 bottom-0 z-[100] flex flex-col transition-transform duration-300 overflow-y-auto ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 glass-dark noise-overlay`}>
       {/* Logo */}
@@ -58,7 +61,7 @@ export default function Sidebar({ isOpen, onClose }) {
 
       {/* Navigation */}
       <nav className="relative z-10 px-3 flex-1 pb-4" role="navigation" aria-label="Main navigation">
-        {navItems.map((item, i) => {
+        {filteredNavItems.map((item, i) => {
           if (item.adminOnly && role !== 'admin') return null
           if (item.section) return (
             <div key={i} className="text-[10px] font-display font-semibold uppercase tracking-[0.12em] text-white/30 px-4 pt-6 pb-2">{item.section}</div>
@@ -80,14 +83,16 @@ export default function Sidebar({ isOpen, onClose }) {
       </nav>
 
       {/* System Status */}
-      <div className="relative z-10 px-6 py-3 border-t border-white/[0.06]">
-        <div className="text-[10px] font-display font-semibold uppercase tracking-[0.12em] text-white/30 mb-2">System Status</div>
-        <div className="flex items-center gap-4">
-          <StatusDot label="GPS" />
-          <StatusDot label="Network" />
-          <StatusDot label="Shield" />
+      {role !== 'admin' && (
+        <div className="relative z-10 px-6 py-3 border-t border-white/[0.06]">
+          <div className="text-[10px] font-display font-semibold uppercase tracking-[0.12em] text-white/30 mb-2">System Status</div>
+          <div className="flex items-center gap-4">
+            <StatusDot label="GPS" />
+            <StatusDot label="Network" />
+            <StatusDot label="Shield" />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* User */}
       <div className="relative z-10 px-3 py-4 border-t border-white/[0.06]">

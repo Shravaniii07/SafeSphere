@@ -22,7 +22,6 @@ import EmergencyInfo from './pages/EmergencyInfo'
 import Tracking from './pages/Tracking'
 import Notifications from './pages/Notifications'
 import TravelSafety from './pages/TravelSafety'
-import SafetyHeatmap from './pages/SafetyHeatmap'
 import Profile from './pages/Profile'
 import AdminPanel from './pages/AdminPanel'
 
@@ -69,7 +68,6 @@ export default function App() {
                 {/* Tracking moved to public — removed from here */}
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/travel" element={<TravelSafety />} />
-                <Route path="/heatmap" element={<SafetyHeatmap />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/women-safety" element={<WomenSafety />} />
                 <Route path="/map" element={<SafetyMapPage />} />

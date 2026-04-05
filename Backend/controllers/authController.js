@@ -12,11 +12,7 @@ const generateToken = (res, userId) => {
     res.cookie("jwt", token, {
         httpOnly: true,
         secure: process.env.NODE_ENV !== "development", // Use secure in production
-<<<<<<< HEAD
-        sameSite: "strict", // Prevent CSRF
-=======
-        sameSite: "lax", // Better cross-origin support for CORS
->>>>>>> 6ef2114c47ddc85c3c1ad6f836d8e7618acc53d9
+        sameSite: "strict",
         maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
     });
 };
@@ -31,24 +27,28 @@ export const registerUser = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    const otpExpire = new Date(Date.now() + 59 * 1000); // 59 seconds
 
-    const user = await User.create({
-        name,
-        email,
-        password: hashedPassword,
-        otp,
-        otpExpire,
-        isVerified: false
-    });
+    let user;
+    try {
+        user = await User.create({
+            name,
+            email,
+            password: hashedPassword,
+            otp,
+            otpExpire,
+            isVerified: false
+        });
 
-    if (user) {
         await sendOTPEmail(email, otp);
         res.status(201).json({
             message: "OTP sent to email. Please verify to complete registration."
         });
-    } else {
-        res.status(400).json({ message: "Invalid user data" });
+    } catch (error) {
+        if (user && user._id) {
+            await User.findByIdAndDelete(user._id); // Cleanup if email fails
+        }
+        res.status(400).json({ message: error.message || "Failed to send OTP to this email. Please check if the email is valid." });
     }
 };
 
@@ -60,14 +60,18 @@ export const loginUser = async (req, res) => {
 
     if (user && (await bcrypt.compare(password, user.password))) {
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const otpExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+        const otpExpire = new Date(Date.now() + 59 * 1000); // 59 seconds
 
         user.otp = otp;
         user.otpExpire = otpExpire;
         await user.save();
 
-        await sendOTPEmail(email, otp);
-        res.json({ message: "OTP sent to email. Please verify to login." });
+        try {
+            await sendOTPEmail(email, otp);
+            res.json({ message: "OTP sent to email. Please verify to login." });
+        } catch (error) {
+            res.status(400).json({ message: "Failed to send OTP to this email." });
+        }
     } else {
         res.status(400).json({ message: "Invalid credentials" });
     }
@@ -77,10 +81,10 @@ export const loginUser = async (req, res) => {
 export const verifyOTP = async (req, res) => {
     const { email, otp } = req.body;
 
-    const user = await User.findOne({ 
-        email, 
-        otp, 
-        otpExpire: { $gt: Date.now() } 
+    const user = await User.findOne({
+        email,
+        otp,
+        otpExpire: { $gt: Date.now() }
     });
 
     if (user) {
@@ -98,6 +102,31 @@ export const verifyOTP = async (req, res) => {
         });
     } else {
         res.status(400).json({ message: "Invalid or expired OTP" });
+    }
+};
+
+// RESEND OTP
+export const resendOTP = async (req, res) => {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+
+    if (user) {
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otpExpire = new Date(Date.now() + 59 * 1000); // 59 seconds
+
+        user.otp = otp;
+        user.otpExpire = otpExpire;
+        await user.save();
+
+        try {
+            await sendOTPEmail(email, otp);
+            res.json({ message: "OTP resent successfully." });
+        } catch (error) {
+            res.status(400).json({ message: "Failed to send OTP to this email." });
+        }
+    } else {
+        res.status(404).json({ message: "User not found" });
     }
 };
 

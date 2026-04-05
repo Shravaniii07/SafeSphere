@@ -136,7 +136,7 @@ export default function SmartSOS() {
           <p className="text-sm text-accent font-medium">This action cannot be undone easily.</p>
         </div>
         <p className="text-slate-600 text-sm leading-relaxed">
-          This will immediately alert <strong>all your emergency contacts</strong> with your current location. They will receive notifications via SMS and in-app alerts.
+          This will immediately alert <strong>all your emergency contacts</strong> with your current location. They will receive notifications via Email and in-app alerts.
         </p>
       </Modal>
     </>

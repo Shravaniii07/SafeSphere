@@ -41,66 +41,9 @@ function SafetyScoreRing({ score }) {
   )
 }
 
-// Pull real data from localStorage
-function getContactCount() {
-  try {
-    const stored = localStorage.getItem('safesphere_emergency_contacts')
-    if (stored) return JSON.parse(stored).length
-  } catch { /* ignore */ }
-  return 3
-}
-
-function getTripHistory() {
-  try {
-    const stored = localStorage.getItem('safesphere_trips')
-    if (stored) return JSON.parse(stored)
-  } catch { /* ignore */ }
-  return []
-}
-
-function getRecentActivity() {
-  const activities = []
-  const now = Date.now()
-
-  // Pull real trips
-  const trips = getTripHistory()
-  trips.slice(0, 3).forEach(trip => {
-    const ago = formatTimeAgo(trip.startTime)
-    activities.push({
-      color: 'bg-emerald-500',
-      text: 'Safe trip completed',
-      desc: `${trip.from?.split(',')[0] || 'From'} → ${trip.to?.split(',')[0] || 'To'} (${trip.distance} km)`,
-      time: ago,
-    })
-  })
-
-  // Pull real contacts
-  try {
-    const contacts = JSON.parse(localStorage.getItem('safesphere_emergency_contacts') || '[]')
-    if (contacts.length > 3) {
-      const latest = contacts[contacts.length - 1]
-      activities.push({
-        color: 'bg-info',
-        text: 'Emergency contact added',
-        desc: `Added ${latest.name}`,
-        time: 'Recently',
-      })
-    }
-  } catch { /* ignore */ }
-
-  // If empty, show default
-  if (activities.length === 0) {
-    activities.push(
-      { color: 'bg-secondary', text: 'SafeSphere activated', desc: 'Your safety dashboard is now live', time: 'Just now' },
-      { color: 'bg-info', text: 'Profile created', desc: 'Set up your emergency contacts to get started', time: 'Today' },
-    )
-  }
-
-  return activities
-}
-
+// Time formatter for activity
 function formatTimeAgo(timestamp) {
-  const diff = Date.now() - timestamp
+  const diff = Date.now() - new Date(timestamp).getTime()
   const mins = Math.floor(diff / 60000)
   if (mins < 1) return 'Just now'
   if (mins < 60) return `${mins}m ago`
@@ -111,44 +54,33 @@ function formatTimeAgo(timestamp) {
   return `${days}d ago`
 }
 
-function computeSafetyScore() {
-  let score = 60 // base
-  const contacts = getContactCount()
-  score += Math.min(contacts * 5, 20) // +5 per contact, max +20
-  const trips = getTripHistory()
-  if (trips.length > 0) score += 10 // completed trips
-  if (trips.length > 3) score += 5
-  return Math.min(score, 100)
-}
-
 export default function Dashboard() {
-  const { user } = useApp()
+  const { user, dashboardStats, fetchDashboardStats } = useApp()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const searchQuery = searchParams.get('search') || ''
 
-  const [contactCount, setContactCount] = useState(getContactCount)
-  const [tripCount, setTripCount] = useState(() => getTripHistory().length)
-  const [safetyScore, setSafetyScore] = useState(computeSafetyScore)
-  const [recentActivity, setRecentActivity] = useState(getRecentActivity)
+  // Refresh data when page is focused (user navigates back)
+  useEffect(() => {
+    fetchDashboardStats()
+    window.addEventListener('focus', fetchDashboardStats)
+    return () => window.removeEventListener('focus', fetchDashboardStats)
+  }, [fetchDashboardStats])
 
-  const filteredActivity = recentActivity.filter(a => 
+  if (!dashboardStats) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    )
+  }
+
+  const { activeContacts, locationShares, tripsCompleted, activities, safetyScore } = dashboardStats
+
+  const filteredActivity = activities.filter(a => 
     a.text.toLowerCase().includes(searchQuery.toLowerCase()) || 
     a.desc.toLowerCase().includes(searchQuery.toLowerCase())
   )
-
-
-  // Refresh data when page is focused (user navigates back)
-  useEffect(() => {
-    const refresh = () => {
-      setContactCount(getContactCount())
-      setTripCount(getTripHistory().length)
-      setSafetyScore(computeSafetyScore())
-      setRecentActivity(getRecentActivity())
-    }
-    window.addEventListener('focus', refresh)
-    return () => window.removeEventListener('focus', refresh)
-  }, [])
 
   return (
     <div className="stagger-children">
@@ -169,10 +101,9 @@ export default function Dashboard() {
       </div>
 
       {/* Quick Stats — pulled from real data */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <MiniStat label="Active Contacts" value={String(contactCount)} accent="text-secondary" />
-        <MiniStat label="Location Shares" value={String(user.activeContacts > 0 ? Math.min(contactCount, 3) : 0)} accent="text-info" />
-        <MiniStat label="Trips Completed" value={String(tripCount)} accent="text-emerald-600" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <MiniStat label="Active Contacts" value={String(activeContacts)} accent="text-secondary" />
+        <MiniStat label="Trips Completed" value={String(tripsCompleted)} accent="text-emerald-600" />
         <div className="bg-white rounded-xl border border-slate-100/80 p-4 shadow-elevated card-hover flex items-center gap-3">
           <SafetyScoreRing score={safetyScore} />
           <div>

@@ -20,6 +20,10 @@ const incidentSchema = new mongoose.Schema(
             type: String,
             required: true,
         },
+        severity: {
+            type: Number,
+            default: 1, // 1-5 scale
+        },
         timestamp: {
             type: Date,
             default: Date.now,

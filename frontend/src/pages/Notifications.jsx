@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { AlertTriangle, Globe, Activity, Info, Shield, Check, Trash2, BellOff, Bell, Megaphone } from 'lucide-react'
 import { Card, CardHeader, CardBody, Button, Badge, EmptyState } from '../components/UI'
+import { useApp } from '../context/AppContext'
 import toast from 'react-hot-toast'
 import api from '../api/api'
 
@@ -25,83 +26,96 @@ function formatTimeAgo(timestamp) {
 }
 
 export default function Notifications() {
-  const [notifications, setNotifications] = useState([])
+  const { notifications, setNotifications, fetchNotifs, user } = useApp()
   const [filter, setFilter] = useState('all') // all, unread
-  const [loading, setLoading] = useState(true)
-
-  const fetchNotifs = async () => {
-    try {
-      const res = await api.get('/api/notifications')
-      setNotifications(res.data || [])
-    } catch (err) {
-      console.error("Notifications fetch error:", err)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     fetchNotifs()
-  }, [])
+  }, [fetchNotifs])
 
-  const unreadCount = notifications.filter(n => !n.read).length
+  const unreadCount = user.unreadNotifications
   const displayed = filter === 'unread'
     ? notifications.filter(n => !n.read)
     : notifications
 
   const markAsRead = async (id) => {
     try {
-      // Backend should have an endpoint for this, assuming it exists or we just manage locally if not
-      // For now, updating local state to reflect read status
+      // Update local state first for immediate feedback
       setNotifications(prev => prev.map(n => n._id === id ? { ...n, read: true } : n))
-      // await api.put(`/api/notifications/${id}/read`)
+      await api.put(`/api/notifications/${id}/read`)
+      // Refresh count from backend or calculate locally
+      fetchNotifs()
     } catch (err) {
       console.error("Mark read error:", err)
+      fetchNotifs()
     }
   }
 
   const markAllRead = async () => {
     try {
       setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+      await api.put('/api/notifications/read-all')
       toast.success('All notifications marked as read')
-      // await api.put('/api/notifications/read-all')
+      fetchNotifs()
     } catch (err) {
       console.error("Mark all read error:", err)
+      fetchNotifs()
     }
   }
 
-  const dismissNotif = (id) => {
-    const removed = notifications.find(n => n.id === id)
-    setNotifications(prev => prev.filter(n => n.id !== id))
-    toast.success(
-      (t) => (
-        <span className="flex items-center gap-3">
-          Notification dismissed
-          <button className="text-secondary font-semibold underline cursor-pointer" onClick={() => {
-            setNotifications(prev => [...prev, removed].sort((a, b) => b.time - a.time))
-            toast.dismiss(t.id)
-          }}>Undo</button>
-        </span>
-      ),
-      { duration: 4000 }
-    )
+  const dismissNotif = async (id) => {
+    try {
+      const removed = notifications.find(n => n._id === id)
+      setNotifications(prev => prev.filter(n => n._id !== id))
+      await api.delete(`/api/notifications/${id}`)
+      fetchNotifs()
+      
+      toast.success(
+        (t) => (
+          <span className="flex items-center gap-3">
+            Notification dismissed
+            <button className="text-secondary font-semibold underline cursor-pointer" onClick={() => {
+              // Note: Undo here only restores local state
+              setNotifications(prev => [...prev, removed].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)))
+              toast.dismiss(t.id)
+              toast.error("Note: Undo is temporary and won't persist after refresh", { id: 'undo-warn' })
+            }}>Undo</button>
+          </span>
+        ),
+        { duration: 4000 }
+      )
+    } catch (err) {
+      console.error("Dismiss error:", err)
+      fetchNotifs()
+    }
   }
 
-  const clearAll = () => {
-    const old = [...notifications]
-    setNotifications([])
-    toast.success(
-      (t) => (
-        <span className="flex items-center gap-3">
-          All notifications cleared
-          <button className="text-secondary font-semibold underline cursor-pointer" onClick={() => {
-            setNotifications(old)
-            toast.dismiss(t.id)
-          }}>Undo</button>
-        </span>
-      ),
-      { duration: 5000 }
-    )
+  const clearAll = async () => {
+    try {
+      const old = [...notifications]
+      setNotifications([])
+      await api.delete('/api/notifications')
+      fetchNotifs()
+      
+      toast.success(
+        (t) => (
+          <span className="flex items-center gap-3">
+            All notifications cleared
+            <button className="text-secondary font-semibold underline cursor-pointer" onClick={() => {
+              // Note: Undo here only restores local state
+              setNotifications(old)
+              toast.dismiss(t.id)
+              toast.error("Note: Undo is temporary and won't persist after refresh", { id: 'undo-warn' })
+            }}>Undo</button>
+          </span>
+        ),
+        { duration: 5000 }
+      )
+    } catch (err) {
+      console.error("Clear all error:", err)
+      fetchNotifs()
+    }
   }
 
   return (

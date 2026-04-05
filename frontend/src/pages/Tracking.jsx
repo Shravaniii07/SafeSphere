@@ -37,6 +37,7 @@ export default function Tracking() {
   const [accuracy, setAccuracy] = useState(null)
   const [timeAgo, setTimeAgo] = useState('Connecting...')
   const [errorCode, setError] = useState(null)
+  const [viewingUserName, setViewingUserName] = useState('')
 
   const { trackingId } = useParams()
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
@@ -46,8 +47,18 @@ export default function Tracking() {
     if (!trackingId || trackingId === 'track' || trackingId === 'tracking') return
 
     const fetchTracking = async () => {
+      // Sanitize trackingId (strip trailing dots or spaces from copy-paste errors)
+      const cleanId = trackingId.replace(/[.\s]+$/, '');
+      
       try {
-        const res = await fetch(`${API_URL}/api/trip/track/${trackingId}`)
+        // 1. Try public tracking session endpoint first
+        let res = await fetch(`${API_URL}/api/tracking/public/${cleanId}`)
+        
+        // 2. Fallback to trip tracking if public tracking ID not found
+        if (!res.ok && res.status === 404) {
+          res = await fetch(`${API_URL}/api/trip/track/${trackingId}`)
+        }
+
         if (!res.ok) {
           if (res.status === 404) {
             setError("Tracking ID not found or expired")
@@ -62,8 +73,14 @@ export default function Tracking() {
           setPosition({ lat: data.location.lat, lng: data.location.lng })
           setLastUpdate(Date.now())
           setError(null) // Clear any previous error
-          if (data.status === 'completed') {
-            setError("This trip has already ended safely")
+
+          // Update username if available from the public session
+          if (data.user?.name) {
+            setViewingUserName(data.user.name)
+          }
+
+          if (data.status === 'completed' || data.status === 'inactive') {
+            setError("This tracking session has ended safely")
           }
         } else {
           setError(data.message || "Tracking not available")
@@ -117,11 +134,12 @@ export default function Tracking() {
   }, [lastUpdate])
 
   const copyLink = () => {
-    if (!position) return
-    const url = `https://safesphere.app/track?lat=${position.lat}&lng=${position.lng}`
+    if (!trackingId) return
+    const baseUrl = window.location.origin
+    const url = `${baseUrl}/track/${trackingId}`
     navigator.clipboard.writeText(url)
       .then(() => toast.success('Tracking link copied!'))
-      .catch(() => toast.success(`Location: ${position.lat.toFixed(6)}, ${position.lng.toFixed(6)}`))
+      .catch(() => toast.success(`Link: ${url}`))
   }
 
   return (
@@ -150,7 +168,7 @@ export default function Tracking() {
             </div>
             <span className="font-display text-xl font-bold text-primary tracking-tight">SafeSphere</span>
           </div>
-          <h2 className="text-2xl lg:text-3xl font-display font-bold text-primary tracking-tight">{user?.name ? `${user.name} is sharing their location` : 'Live Location Tracking'}</h2>
+          <h2 className="text-2xl lg:text-3xl font-display font-bold text-primary tracking-tight">{viewingUserName ? `${viewingUserName} is sharing their location` : 'Live Location Tracking'}</h2>
           <p className="text-slate-500 text-sm mt-2">Real-time tracking link · Encrypted & secure</p>
         </div>
 

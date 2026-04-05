@@ -7,7 +7,9 @@ import toast from 'react-hot-toast'
 export default function VerifyOTP() {
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [isLoading, setIsLoading] = useState(false)
-  const { verifyOTP } = useAuth()
+  const [isResending, setIsResending] = useState(false)
+  const [timeLeft, setTimeLeft] = useState(59)
+  const { verifyOTP, resendOTP } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const email = location.state?.email
@@ -19,6 +21,14 @@ export default function VerifyOTP() {
       navigate('/login')
     }
   }, [email, navigate])
+
+  useEffect(() => {
+    if (timeLeft <= 0) return
+    const timerId = setInterval(() => {
+      setTimeLeft(prev => prev - 1)
+    }, 1000)
+    return () => clearInterval(timerId)
+  }, [timeLeft])
 
   const handleChange = (element, index) => {
     if (isNaN(element.value)) return false
@@ -153,9 +163,29 @@ export default function VerifyOTP() {
           <div className="text-center mt-6">
             <p className="text-sm text-slate-500">
               Didn't receive the code?{' '}
-              <button type="button" className="text-secondary hover:text-secondary-dark font-medium transition-colors cursor-pointer">
-                Resend OTP
-              </button>
+              {timeLeft > 0 ? (
+                <span className="font-medium text-slate-400 cursor-not-allowed">Resend in {timeLeft}s</span>
+              ) : (
+                <button 
+                  type="button" 
+                  disabled={isResending}
+                  className="text-secondary hover:text-secondary-dark font-medium transition-colors cursor-pointer disabled:opacity-50" 
+                  onClick={async () => {
+                    if (!email) return;
+                    setIsResending(true)
+                    try {
+                      await resendOTP(email)
+                      setTimeLeft(59)
+                      toast.success('OTP resent! Check your email.')
+                    } catch (err) {
+                      toast.error(err.message || 'Failed to resend OTP')
+                    } finally {
+                      setIsResending(false)
+                    }
+                }}>
+                  {isResending ? 'Sending...' : 'Resend OTP'}
+                </button>
+              )}
             </p>
           </div>
         </div>
