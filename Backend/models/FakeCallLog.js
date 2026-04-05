@@ -19,4 +19,11 @@ const fakeCallLogSchema = new mongoose.Schema(
 
 const FakeCallLog = mongoose.model("FakeCallLog", fakeCallLogSchema);
 
+<<<<<<< HEAD
 export default FakeCallLog;
+=======
+export default FakeCallLog;
+
+
+
+>>>>>>> 6ef2114c47ddc85c3c1ad6f836d8e7618acc53d9

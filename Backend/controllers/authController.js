@@ -12,7 +12,11 @@ const generateToken = (res, userId) => {
     res.cookie("jwt", token, {
         httpOnly: true,
         secure: process.env.NODE_ENV !== "development", // Use secure in production
+<<<<<<< HEAD
         sameSite: "strict", // Prevent CSRF
+=======
+        sameSite: "lax", // Better cross-origin support for CORS
+>>>>>>> 6ef2114c47ddc85c3c1ad6f836d8e7618acc53d9
         maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
     });
 };
