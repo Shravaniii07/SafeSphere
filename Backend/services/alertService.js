@@ -13,8 +13,8 @@ export const checkTripsAndAlert = async () => {
     for (let trip of trips) {
         const user = await User.findById(trip.user);
 
-        if (user && user.emergencyContacts.length > 0) {
-            await sendEmergencyAlertEmail(user.emergencyContacts, user, trip);
+        if (trip.autoShare === true && user && user.emergencyContacts.length > 0) {
+            await sendEmergencyAlertEmail(user.emergencyContacts, user, { trip });
         }
 
         trip.status = "expired";

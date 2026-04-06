@@ -27,6 +27,8 @@ const tripSchema = new mongoose.Schema({
     },
 
     trackingId: String,
+    
+    autoShare: { type: Boolean, default: true },
 
     createdAt: {
         type: Date,

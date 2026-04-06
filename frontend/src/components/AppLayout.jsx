@@ -14,7 +14,6 @@ const pageTitles = {
   '/tracking': 'Public Tracking',
   '/notifications': 'Notifications',
   '/travel': 'Travel Safety',
-  '/heatmap': 'Safety Heatmap',
   '/profile': 'Profile',
   '/admin/dashboard': 'Admin Panel',
   '/women-safety': 'Women Safety',
@@ -29,7 +28,6 @@ const pageTitles = {
 const pageTints = {
   '/sos': 'mesh-sos',
   '/location': 'mesh-location',
-  '/heatmap': 'mesh-heatmap',
   '/safety-map': 'mesh-heatmap',
 }
 

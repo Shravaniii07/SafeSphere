@@ -1,6 +1,16 @@
 import User from "../models/User.js";
 import Notification from "../models/Notification.js";
+import Incident from "../models/Incident.js";
+import Trip from "../models/Trip.js";
+import SOS from "../models/SOS.js";
+import FakeCallLog from "../models/FakeCallLog.js";
+import Tracking from "../models/Tracking.js";
+import Report from "../models/Report.js";
+import Location from "../models/Location.js";
+import SystemAlert from "../models/SystemAlert.js";
 import bcrypt from "bcryptjs";
+
+const ROOT_ADMIN = "admin@safesphere.com";
 
 // Get all users
 export const getUsers = async (req, res) => {
@@ -12,62 +22,81 @@ export const getUsers = async (req, res) => {
     }
 };
 
-// Delete user
+// Delete User or Admin (Cascading)
 export const deleteUser = async (req, res) => {
     try {
-        await User.findByIdAndDelete(req.params.id);
-        res.json({ message: "User removed" });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-};
+        const targetId = req.params.id;
+        const targetUser = await User.findById(targetId);
 
-// Create New Admin (Delegated Authority)
-export const createAdmin = async (req, res) => {
-    const { name, email, password } = req.body;
-
-    try {
-        const userExists = await User.findOne({ email });
-        if (userExists) {
-            return res.status(400).json({ message: "User already exists" });
+        if (!targetUser) {
+            return res.status(404).json({ message: "User not found" });
         }
 
-        const hashedPassword = await bcrypt.hash(password, 10);
+        // 1. Protection for Root Admin
+        if (targetUser.email === ROOT_ADMIN) {
+            return res.status(403).json({ message: "Default Root Admin cannot be deleted." });
+        }
 
-        const admin = await User.create({
-            name,
-            email,
-            password: hashedPassword,
-            role: "admin",
-            isVerified: true 
-        });
+        // 2. Cascading Delete
+        await Promise.all([
+            Incident.deleteMany({ user: targetId }),
+            Trip.deleteMany({ user: targetId }),
+            Notification.deleteMany({ userId: targetId }),
+            SOS.deleteMany({ user: targetId }),
+            FakeCallLog.deleteMany({ user: targetId }),
+            Tracking.deleteMany({ user: targetId }),
+            Report.deleteMany({ user: targetId }),
+            Location.deleteMany({ user: targetId }),
+            User.findByIdAndDelete(targetId)
+        ]);
 
-        res.status(201).json({
-            success: true,
-            message: "Admin created successfully",
-            admin: {
-                id: admin._id,
-                name: admin.name,
-                email: admin.email,
-                role: admin.role
-            }
-        });
+        res.json({ success: true, message: `${targetUser.name} and all associated data purged.` });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 };
 
-// Send system alert
+// Send system alert (optimized bulk broadcasting)
 export const sendAlertToAll = async (req, res) => {
-    const users = await User.find();
-
-    for (let user of users) {
-        await Notification.create({
-            userId: user._id,
-            type: "ALERT",
-            message: req.body.message
+    try {
+        const { message, title, type } = req.body;
+        
+        // 1. Save to global SystemAlert history
+        const newAlert = await SystemAlert.create({
+            title: title || "Message from Admin",
+            message: message,
+            type: (type || "ALERT").toUpperCase()
         });
-    }
 
-    res.json({ success: true });
+        // 2. Broadcast to all users
+        const users = await User.find({}, '_id');
+
+        if (!users || users.length === 0) {
+            return res.status(200).json({ success: true, count: 0, alert: newAlert });
+        }
+
+        const notifications = users.map(user => ({
+            userId: user._id,
+            type: newAlert.type, 
+            title: newAlert.title,
+            message: newAlert.message,
+            read: false
+        }));
+
+        await Notification.insertMany(notifications);
+
+        res.json({ success: true, count: notifications.length, alert: newAlert });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// Get system alert history
+export const getAlertHistory = async (req, res) => {
+    try {
+        const alerts = await SystemAlert.find().sort({ createdAt: -1 });
+        res.json(alerts);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
 };

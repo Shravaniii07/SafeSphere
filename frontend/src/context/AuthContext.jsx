@@ -29,7 +29,7 @@ export function AuthProvider({ children }) {
       const res = await api.post('/api/auth/login', { email, password })
       return res.data // Should trigger OTP notification on success
     } catch (error) {
-      throw new Error(error.response?.data?.message || 'Login failed')
+      throw new Error(error.message || 'Login failed')
     }
   }, [])
 
@@ -38,7 +38,7 @@ export function AuthProvider({ children }) {
       const res = await api.post('/api/auth/register', { name, email, password })
       return res.data // Should trigger OTP notification on success
     } catch (error) {
-      throw new Error(error.response?.data?.message || 'Registration failed')
+      throw new Error(error.message || 'Registration failed')
     }
   }, [])
 
@@ -63,7 +63,7 @@ export function AuthProvider({ children }) {
       await refreshProfile()
       return res.data
     } catch (error) {
-      throw new Error(error.response?.data?.message || 'Profile update failed')
+      throw new Error(error.message || 'Profile update failed')
     }
   }, [refreshProfile])
 
@@ -85,7 +85,7 @@ export function AuthProvider({ children }) {
       
       return { ...userData, role: actualRole }
     } catch (error) {
-      throw new Error(error.response?.data?.message || 'OTP verification failed')
+      throw new Error(error.message || 'OTP verification failed')
     }
   }, [refreshProfile])
 
@@ -94,7 +94,16 @@ export function AuthProvider({ children }) {
       const res = await api.post('/api/auth/login', { email, password })
       return res.data
     } catch (error) {
-      throw new Error(error.response?.data?.message || 'Admin login failed')
+      throw new Error(error.message || 'Admin login failed')
+    }
+  }, [])
+
+  const resendOTP = useCallback(async (email) => {
+    try {
+      const res = await api.post('/api/auth/resend-otp', { email })
+      return res.data
+    } catch (error) {
+      throw new Error(error.message || 'Failed to resend OTP')
     }
   }, [])
 
@@ -109,13 +118,24 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
+  const deleteAccount = useCallback(async () => {
+    try {
+      await api.delete('/api/user/profile')
+      setAuthState({ user: null, role: null, isAuthenticated: false })
+      localStorage.removeItem('safesphere_auth')
+    } catch (error) {
+      throw new Error(error.message || 'Account deletion failed')
+    }
+  }, [])
+
 
   return (
-    <AuthContext.Provider value={{ ...authState, login, register, verifyOTP, adminLogin, logout, updateProfile, refreshProfile }}>
+    <AuthContext.Provider value={{ ...authState, login, register, verifyOTP, adminLogin, resendOTP, logout, updateProfile, refreshProfile, deleteAccount }}>
       {children}
     </AuthContext.Provider>
   )
 }
+
 
 export const useAuth = () => {
   const ctx = useContext(AuthContext)

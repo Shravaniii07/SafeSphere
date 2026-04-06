@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { LayoutDashboard, AlertTriangle, Globe, Bell, User } from 'lucide-react'
 import { useApp } from '../context/AppContext'
+import { useAuth } from '../context/AuthContext'
 
 const navItems = [
   { id: '/dashboard', label: 'Home', icon: LayoutDashboard },
@@ -12,15 +13,18 @@ const navItems = [
 
 export default function BottomNav() {
   const { user } = useApp()
+  const { role } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const activePage = location.pathname
+
+  const filteredItems = role === 'admin' ? navItems.filter(item => !item.isSos) : navItems
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[100] glass border-t border-slate-100/60 px-2 pb-[env(safe-area-inset-bottom)]"
       role="navigation" aria-label="Mobile navigation">
       <div className="flex items-end justify-around h-16">
-        {navItems.map(item => {
+        {filteredItems.map(item => {
           const isActive = activePage === item.id
           if (item.isSos) {
             return (

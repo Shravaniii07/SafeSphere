@@ -3,7 +3,8 @@ import mongoose from "mongoose";
 const emergencyContactSchema = new mongoose.Schema({
     name: String,
     phone: String,
-    email: String,
+    email: { type: String, required: true },
+    relationship: String,
 });
 
 const userSchema = new mongoose.Schema(

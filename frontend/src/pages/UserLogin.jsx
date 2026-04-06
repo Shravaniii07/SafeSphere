@@ -101,17 +101,6 @@ export default function UserLogin() {
               {errors.password && <p className="text-xs text-accent">{errors.password.message}</p>}
             </div>
 
-            {/* Remember me + Forgot */}
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-secondary focus:ring-secondary/20 cursor-pointer" />
-                <span className="text-sm text-slate-600">Remember me</span>
-              </label>
-              <button type="button" className="text-sm text-secondary hover:text-secondary-dark font-medium transition-colors cursor-pointer">
-                Forgot password?
-              </button>
-            </div>
-
             {/* Submit */}
             <button
               type="submit"
@@ -134,6 +123,17 @@ export default function UserLogin() {
             </button>
           </form>
 
+          {/* Admin Login Button - Moved here for prominence */}
+          <div className="mt-4 pt-4 border-t border-slate-100">
+            <Link 
+              to="/admin/login" 
+              className="w-full flex items-center justify-center gap-2 px-6 py-3 border-2 border-primary/10 text-primary font-display font-bold rounded-xl hover:bg-primary/5 hover:border-primary/20 transition-all duration-200"
+            >
+              <Shield className="w-4 h-4 text-secondary" />
+              Access Admin Portal
+            </Link>
+          </div>
+
           {/* Demo credentials */}
           <div className="mt-6 p-3.5 bg-secondary-50 rounded-xl border border-secondary/10">
             <div className="flex items-center gap-2 mb-1.5">
@@ -144,19 +144,14 @@ export default function UserLogin() {
           </div>
         </div>
 
-        {/* Register + Admin links */}
-        <div className="text-center mt-6 animate-fade-in space-y-3">
+        {/* Register link */}
+        <div className="text-center mt-6 animate-fade-in">
           <p className="text-sm text-slate-500">
             Don't have an account?{' '}
             <Link to="/register" className="text-secondary hover:text-secondary-dark font-medium transition-colors">
               Create one
             </Link>
           </p>
-          <Link to="/admin/login" className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-primary transition-colors group">
-            <Shield className="w-4 h-4 group-hover:text-secondary transition-colors" />
-            Admin Login
-            <ArrowRight className="w-3 h-3 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
-          </Link>
         </div>
       </div>
     </div>

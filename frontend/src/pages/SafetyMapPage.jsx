@@ -1,15 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents, Circle } from 'react-leaflet'
 import L from 'leaflet'
 import {
   MapPin, AlertTriangle, Layers,
-  X, Send
+  X, Send, Trash2
 } from 'lucide-react'
 import { Card, CardBody, Button, Badge } from '../components/UI'
 import 'leaflet/dist/leaflet.css'
 import toast from 'react-hot-toast'
 import api from '../api/api'
+import { useApp } from '../context/AppContext'
 
 // Fix leaflet default marker icon
 delete L.Icon.Default.prototype._getIconUrl
@@ -25,6 +26,18 @@ const createIcon = (color) => L.divIcon({
   iconSize: [28, 28],
   iconAnchor: [14, 14],
 })
+
+// Distance utility (Haversine formula)
+const getDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 6371; // km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
 
 // Mock data for nearby places
 const mockPoliceStations = [
@@ -50,16 +63,35 @@ function ClickHandler({ onMapClick }) {
 }
 
 export default function SafetyMapPage() {
+  const { user } = useApp()
   const [showPinModal, setShowPinModal] = useState(false)
   const [clickedPos, setClickedPos] = useState(null)
   const [pinNote, setPinNote] = useState('')
   const [incidentType, setIncidentType] = useState('Other')
+  const [severity, setSeverity] = useState(3)
   const [userPins, setUserPins] = useState([])
-  const [layers, setLayers] = useState({ police: true, hospitals: true, safeZones: true, userPins: true })
+  const [layers, setLayers] = useState({ safeZone: true, userPins: true })
+  const [realPolice, setRealPolice] = useState([])
+  const [realHospitals, setRealHospitals] = useState([])
+  const [mapCenter, setMapCenter] = useState([18.5204, 73.8567]) // Default Pune
+  const [userLocation, setUserLocation] = useState(null)
+  const mapRef = useRef(null)
 
-  const [center] = useState([18.5204, 73.8567]) // Pune default
+  // 1. Get user location on load
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition((pos) => {
+        const { latitude, longitude } = pos.coords;
+        setUserLocation([latitude, longitude]);
+        setMapCenter([latitude, longitude]);
+      }, (err) => {
+        console.error("Geolocation error:", err);
+        toast.error("Could not find your location. Defaulting to center.");
+      });
+    }
+  }, []);
 
-  // Fetch incidents from backend
+  // 2. Fetch incidents (No nearby services anymore)
   useEffect(() => {
     const fetchIncidents = async () => {
       try {
@@ -70,17 +102,47 @@ export default function SafetyMapPage() {
             lat: inc.location.lat,
             lng: inc.location.lng,
             note: inc.description,
-            type: inc.type
+            type: inc.type,
+            severity: inc.severity || 1,
+            userId: inc.user
           })))
         }
       } catch (err) {
         console.error("Incidents fetch error:", err)
       }
     }
+
     fetchIncidents()
+    const interval = setInterval(fetchIncidents, 5000)
+    return () => clearInterval(interval)
   }, [])
 
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this report?')) return;
+    try {
+      const res = await api.delete(`/api/incidents/${id}`)
+      if (res.data.success) {
+        toast.success('Report deleted successfully')
+        setUserPins(prev => prev.filter(p => p.id !== id))
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete report')
+    }
+  }
+
   const handleMapClick = (latlng) => {
+    if (!userLocation) {
+      toast.error('Waiting for GPS signal...')
+      return
+    }
+
+    // Check 10km radius
+    const dist = getDistance(userLocation[0], userLocation[1], latlng.lat, latlng.lng)
+    if (dist > 10) {
+      toast.error('You can only report incidents within 10km of your location.')
+      return
+    }
+
     setClickedPos(latlng)
     setShowPinModal(true)
     setPinNote('')
@@ -94,6 +156,7 @@ export default function SafetyMapPage() {
         lat: clickedPos.lat,
         lng: clickedPos.lng,
         type: incidentType,
+        severity: severity,
         description: pinNote || `Reported ${incidentType}`
       })
 
@@ -104,11 +167,13 @@ export default function SafetyMapPage() {
           lat: newInc.location.lat,
           lng: newInc.location.lng,
           note: newInc.description,
-          type: newInc.type
+          type: newInc.type,
+          severity: newInc.severity
         }])
         setShowPinModal(false)
         setPinNote('')
         setIncidentType('Other')
+        setSeverity(3)
         toast.success('Incident reported successfully! 🛡️')
       }
     } catch (err) {
@@ -125,7 +190,7 @@ export default function SafetyMapPage() {
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-2xl font-display font-bold text-primary tracking-tight mb-1">Safety Map</h1>
-          <p className="text-slate-500 text-sm">Explore nearby safe zones, services, and report unsafe areas</p>
+          <p className="text-slate-500 text-sm">Stay informed with real-time community safety updates.</p>
         </div>
         <Badge variant="success" dot>Live</Badge>
       </div>
@@ -135,64 +200,77 @@ export default function SafetyMapPage() {
         <div className="lg:col-span-9">
           <Card hover={false}>
             <div className="relative rounded-2xl overflow-hidden" style={{ height: '520px' }}>
-              <MapContainer center={center} zoom={13} style={{ height: '100%', width: '100%' }} className="z-0">
+              <MapContainer
+                center={mapCenter}
+                zoom={14}
+                style={{ height: '100%', width: '100%' }}
+                className="z-0"
+                ref={mapRef}
+                key={`${mapCenter[0]}-${mapCenter[1]}`} // Force re-render when location found
+              >
                 <TileLayer
                   attribution='&copy; <a href="https://carto.com">CARTO</a>'
                   url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
                 />
                 <ClickHandler onMapClick={handleMapClick} />
 
-                {/* Police Stations */}
-                {layers.police && mockPoliceStations.map(p => (
-                  <Marker key={`police-${p.id}`} position={[p.lat, p.lng]} icon={createIcon('#0F172A')}>
-                    <Popup>
-                      <div className="font-sans">
-                        <strong className="font-display text-sm">{p.name}</strong>
-                        <p className="text-xs text-gray-500 mt-0.5">{p.address}</p>
-                        <span className="inline-block text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full mt-1 font-medium">Police Station</span>
-                      </div>
-                    </Popup>
-                  </Marker>
-                ))}
-
-                {/* Hospitals */}
-                {layers.hospitals && mockHospitals.map(h => (
-                  <Marker key={`hosp-${h.id}`} position={[h.lat, h.lng]} icon={createIcon('#10B981')}>
-                    <Popup>
-                      <div className="font-sans">
-                        <strong className="font-display text-sm">{h.name}</strong>
-                        <p className="text-xs text-gray-500 mt-0.5">{h.address}</p>
-                        <span className="inline-block text-[10px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full mt-1 font-medium">Hospital</span>
-                      </div>
-                    </Popup>
-                  </Marker>
-                ))}
-
-                {/* Safe Zones */}
-                {layers.safeZones && mockSafeZones.map(s => (
-                  <Marker key={`safe-${s.id}`} position={[s.lat, s.lng]} icon={createIcon('#06B6D4')}>
-                    <Popup>
-                      <div className="font-sans">
-                        <strong className="font-display text-sm">{s.name}</strong>
-                        <p className="text-xs text-gray-500 mt-0.5">{s.address}</p>
-                        <span className="inline-block text-[10px] bg-secondary-50 text-secondary px-2 py-0.5 rounded-full mt-1 font-medium">Safe Zone</span>
-                      </div>
-                    </Popup>
-                  </Marker>
-                ))}
+                {/* Safe Zone (10km Circle) */}
+                {userLocation && (
+                  <Circle
+                    center={userLocation}
+                    radius={10000} // 10km in meters
+                    pathOptions={{
+                      fillColor: '#10B981',
+                      fillOpacity: 0.1,
+                      color: '#10B981',
+                      weight: 1
+                    }}
+                  />
+                )}
 
                 {/* User Pins (Incidents) */}
-                {layers.userPins && userPins.map(p => (
-                  <Marker key={`pin-${p.id}`} position={[p.lat, p.lng]} icon={createIcon('#F43F5E')}>
-                    <Popup>
-                      <div className="font-sans">
-                        <strong className="font-display text-sm text-accent">⚠ {p.type}</strong>
-                        <p className="text-xs text-gray-500 mt-0.5">{p.note}</p>
-                        <span className="inline-block text-[10px] bg-accent-50 text-accent px-2 py-0.5 rounded-full mt-1 font-medium">Incident Report</span>
-                      </div>
-                    </Popup>
-                  </Marker>
-                ))}
+                {layers.userPins && userPins.map(p => {
+                  // Only show pins within 10km of user if location exists
+                  const dist = userLocation ? getDistance(userLocation[0], userLocation[1], p.lat, p.lng) : 0
+                  if (userLocation && dist > 10) return null
+
+                  return (
+                    <Marker
+                      key={`pin-${p.id}`}
+                      position={[p.lat, p.lng]}
+                      icon={createIcon(
+                        p.severity >= 4 ? '#F43F5E' : // High (Red)
+                          p.severity === 3 ? '#F59E0B' : // Medium (Orange)
+                            '#FACC15' // Low (Yellow)
+                      )}
+                    >
+                      <Popup>
+                        <div className="font-sans">
+                          <div className="flex items-center justify-between mb-1 gap-4">
+                            <strong className="font-display text-sm text-primary">⚠ {p.type}</strong>
+                            {p.userId === user?._id && (
+                              <button
+                                onClick={() => handleDelete(p.id)}
+                                className="p-1 hover:bg-red-50 text-red-500 rounded transition-colors cursor-pointer"
+                                title="Delete report"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-500 mt-0.5">{p.note}</p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${p.severity >= 4 ? 'bg-red-50 text-red-600' :
+                                p.severity === 3 ? 'bg-amber-50 text-amber-600' : 'bg-yellow-50 text-yellow-600'
+                              }`}>
+                              {p.severity >= 4 ? 'High Risk' : p.severity === 3 ? 'Medium Risk' : 'Low Risk'}
+                            </span>
+                          </div>
+                        </div>
+                      </Popup>
+                    </Marker>
+                  )
+                })}
 
               </MapContainer>
             </div>
@@ -207,9 +285,7 @@ export default function SafetyMapPage() {
                 <Layers className="w-4 h-4 text-secondary" /> Map Layers
               </h4>
               <div className="space-y-3">
-                <LayerToggle label="Police Stations" color="bg-primary" count={mockPoliceStations.length} active={layers.police} onClick={() => toggleLayer('police')} />
-                <LayerToggle label="Hospitals" color="bg-emerald-500" count={mockHospitals.length} active={layers.hospitals} onClick={() => toggleLayer('hospitals')} />
-                <LayerToggle label="Safe Zones" color="bg-secondary" count={mockSafeZones.length} active={layers.safeZones} onClick={() => toggleLayer('safeZones')} />
+                <LayerToggle label="Active Safe Zone" color="bg-emerald-500" count="1" active={layers.safeZone} onClick={() => toggleLayer('safeZone')} />
                 <LayerToggle label="Danger Reports" color="bg-accent" count={userPins.length} active={layers.userPins} onClick={() => toggleLayer('userPins')} />
               </div>
             </CardBody>
@@ -245,17 +321,6 @@ export default function SafetyMapPage() {
             </CardBody>
           </Card>
 
-          <Card>
-            <CardBody>
-              <h4 className="text-sm font-display font-bold text-primary mb-3">Legend</h4>
-              <div className="space-y-2.5">
-                <LegendDot color="bg-primary" label="Police Station" />
-                <LegendDot color="bg-emerald-500" label="Hospital" />
-                <LegendDot color="bg-secondary" label="Safe Zone" />
-                <LegendDot color="bg-accent" label="User Report" />
-              </div>
-            </CardBody>
-          </Card>
         </div>
       </div>
 
@@ -264,7 +329,7 @@ export default function SafetyMapPage() {
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-primary-dark/60 backdrop-blur-md" style={{ animation: 'modal-overlay-in 0.2s ease' }}>
           {/* Backdrop Overlay (closes modal on click) */}
           <div className="absolute inset-0" onClick={() => setShowPinModal(false)} />
-          
+
           {/* Modal Content */}
           <div
             className="relative bg-white rounded-2xl shadow-elevated-lg w-full max-w-[400px] p-6 lg:p-8"
@@ -279,7 +344,7 @@ export default function SafetyMapPage() {
                 <X className="w-4 h-4" />
               </button>
             </div>
-            
+
             <p className="text-xs text-slate-400 mb-4 font-medium uppercase tracking-wider">
               Location: {clickedPos?.lat.toFixed(4)}, {clickedPos?.lng.toFixed(4)}
             </p>
@@ -292,13 +357,34 @@ export default function SafetyMapPage() {
                     key={type}
                     onClick={() => setIncidentType(type)}
                     className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all ${incidentType === type
-                        ? 'bg-accent border-accent text-white shadow-sm'
-                        : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                      ? 'bg-accent border-accent text-white shadow-sm'
+                      : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
                       }`}
                   >
                     {type}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 block">Severity (1-5)</label>
+              <div className="flex items-center justify-between gap-2 p-1 bg-slate-50 rounded-xl border border-slate-100">
+                {[1, 2, 3, 4, 5].map(v => (
+                  <button
+                    key={v}
+                    onClick={() => setSeverity(v)}
+                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${severity === v
+                      ? (v >= 4 ? 'bg-red-500 text-white' : v === 3 ? 'bg-amber-500 text-white' : 'bg-yellow-400 text-slate-900')
+                      : 'bg-transparent text-slate-400 hover:text-slate-600'}`}
+                  >
+                    {v}
+                  </button>
+                ))}
+              </div>
+              <div className="flex justify-between mt-1 px-1">
+                <span className="text-[9px] text-slate-400 font-bold uppercase">Low Risk</span>
+                <span className="text-[9px] text-slate-400 font-bold uppercase">High Risk</span>
               </div>
             </div>
 
@@ -309,7 +395,7 @@ export default function SafetyMapPage() {
               rows={3}
               className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-800 text-sm resize-none transition-all duration-200 focus:border-secondary focus:ring-2 focus:ring-secondary/10 focus:outline-none placeholder-slate-400 mb-4"
             />
-            
+
             <div className="flex gap-3 justify-end">
               <Button variant="outline" onClick={() => setShowPinModal(false)}>Cancel</Button>
               <Button variant="danger" onClick={submitPin}>
