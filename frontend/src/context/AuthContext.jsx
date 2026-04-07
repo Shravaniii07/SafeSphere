@@ -5,6 +5,7 @@ const MOCK_USERS = {
   user: { email: 'user@safesphere.com', password: 'password123', name: 'Yash', initials: 'Y' },
   admin: { email: 'admin@safesphere.com', password: 'admin123', name: 'Admin', initials: 'A', secretKey: 'safesphere-admin-2026' },
 }
+import api from '../api/api'
 
 const AuthContext = createContext(null)
 

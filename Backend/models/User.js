@@ -3,6 +3,8 @@ import mongoose from "mongoose";
 const emergencyContactSchema = new mongoose.Schema({
     name: String,
     phone: String,
+    email: { type: String, required: true },
+    relationship: String,
 });
 
 const userSchema = new mongoose.Schema(
@@ -17,6 +19,13 @@ const userSchema = new mongoose.Schema(
         emergencyNotes: String,
 
         emergencyContacts: [emergencyContactSchema],
+
+        otp: String,
+        otpExpire: Date,
+        isVerified: {
+            type: Boolean,
+            default: false,
+        },
 
         role: {
             type: String,

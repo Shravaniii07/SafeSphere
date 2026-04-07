@@ -44,13 +44,23 @@ export default function AppLayout() {
   return (
     <div className={`flex min-h-screen ${bgClass}`}>
       <Toaster position="top-right" toastOptions={{
-        style: { fontFamily: "'Inter', system-ui", borderRadius: '14px', fontSize: '14px', fontWeight: '500', padding: '14px 18px', boxShadow: '0 8px 32px rgba(0,0,0,0.08)', border: '1px solid rgba(0,0,0,0.04)', letterSpacing: '-0.01em' },
+        style: { 
+          fontFamily: "'Inter', system-ui", 
+          borderRadius: '14px', 
+          fontSize: '14px', 
+          fontWeight: '500', 
+          padding: '14px 18px', 
+          boxShadow: '0 8px 32px rgba(0,0,0,0.3)', 
+          border: '1px solid rgba(255,255,255,0.1)', 
+          background: '#111827',
+          color: '#F1FAEE',
+        },
         success: { duration: 3000 },
         error: { duration: 4000 },
       }} />
 
       {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[99] lg:hidden"
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[99] lg:hidden"
           style={{ animation: 'modal-overlay-in 0.25s ease' }} onClick={() => setSidebarOpen(false)} />
       )}
 

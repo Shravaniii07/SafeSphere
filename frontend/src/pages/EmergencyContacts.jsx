@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Phone, Search, Download, MapPin, Heart, Shield, Flame, Brain,
-  Ambulance, ChevronRight, Building2, AlertTriangle, PhoneCall
+  Ambulance, ChevronRight, Building2, AlertTriangle, PhoneCall, Plus, X
 } from 'lucide-react'
-import { Card, CardBody, Badge } from '../components/UI'
+import { Card, CardBody, Badge, Button } from '../components/UI'
 import toast from 'react-hot-toast'
+import api from '../api/api'
 
 const categories = [
   {
@@ -82,6 +83,50 @@ export default function EmergencyContacts() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCity, setSelectedCity] = useState('Pune')
   const [activeCategory, setActiveCategory] = useState(null)
+  const [personalContacts, setPersonalContacts] = useState([])
+  const [newContact, setNewContact] = useState({ name: '', phone: '', email: '' })
+  const [loading, setLoading] = useState(true)
+
+  const fetchPersonalContacts = async () => {
+    try {
+      const res = await api.get('/api/user/contacts')
+      setPersonalContacts(res.data || [])
+    } catch (err) {
+      console.error("Contacts fetch error:", err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchPersonalContacts()
+  }, [])
+
+  const handleAddContact = async (e) => {
+    e.preventDefault()
+    if (!newContact.name || !newContact.phone || !newContact.email) {
+      toast.error('Name, phone, and email are required')
+      return
+    }
+    try {
+      await api.post('/api/user/contacts', newContact)
+      toast.success('Contact added!')
+      setNewContact({ name: '', phone: '', email: '' })
+      fetchPersonalContacts()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to add contact')
+    }
+  }
+
+  const handleDeleteContact = async (id) => {
+    try {
+      await api.delete(`/api/user/contacts/${id}`)
+      toast.success('Contact removed')
+      fetchPersonalContacts()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to remove contact')
+    }
+  }
 
   const downloadPDF = () => {
     // TODO: Replace with proper PDF generation (jsPDF or backend)
@@ -115,6 +160,38 @@ export default function EmergencyContacts() {
 
   return (
     <div className="stagger-children">
+      {/* Personal Contacts Section */}
+      <Card className="mb-8 border-secondary/20 bg-secondary/5">
+        <CardBody>
+          <h3 className="text-lg font-display font-bold text-primary mb-4 flex items-center gap-2">
+            <Heart className="w-5 h-5 text-secondary" /> My Emergency Contacts
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+            {personalContacts.map((contact) => (
+              <div key={contact._id} className="p-4 bg-white rounded-xl border border-secondary/10 flex items-center justify-between group">
+                <div>
+                  <p className="font-bold text-primary">{contact.name}</p>
+                  <p className="text-xs text-slate-500">{contact.phone} • {contact.email}</p>
+                </div>
+                <button onClick={() => handleDeleteContact(contact._id)} className="p-2 text-slate-300 hover:text-accent cursor-pointer transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+            {personalContacts.length === 0 && !loading && (
+              <p className="text-sm text-slate-400 italic">No personal contacts added yet.</p>
+            )}
+          </div>
+          
+          <form onSubmit={handleAddContact} className="flex flex-wrap gap-3 p-4 bg-white/50 rounded-xl border border-dashed border-secondary/30">
+            <input type="text" placeholder="Name" required value={newContact.name} onChange={e => setNewContact({...newContact, name: e.target.value})} className="px-3 py-2 text-sm border border-slate-200 rounded-lg flex-1 min-w-[150px]" />
+            <input type="text" placeholder="Phone" required value={newContact.phone} onChange={e => setNewContact({...newContact, phone: e.target.value})} className="px-3 py-2 text-sm border border-slate-200 rounded-lg flex-1 min-w-[150px]" />
+            <input type="email" placeholder="Email" required value={newContact.email} onChange={e => setNewContact({...newContact, email: e.target.value})} className="px-3 py-2 text-sm border border-slate-200 rounded-lg flex-1 min-w-[120px]" />
+            <Button type="submit" size="sm" variant="secondary"><Plus className="w-4 h-4" /> Add</Button>
+          </form>
+        </CardBody>
+      </Card>
+
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-2xl font-display font-bold text-primary tracking-tight mb-1">Emergency Contacts</h1>

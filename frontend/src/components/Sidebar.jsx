@@ -44,68 +44,66 @@ export default function Sidebar({ isOpen, onClose }) {
     onClose?.()
   }
 
-  return (
-    <aside className={`w-[272px] fixed top-0 left-0 bottom-0 z-[100] flex flex-col transition-transform duration-400 overflow-y-auto ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
-      style={{ background: 'linear-gradient(180deg, #111827 0%, #1F2937 100%)', transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)' }}>
+  const filteredNavItems = role === 'admin' 
+    ? navItems.filter(item => item.id === '/admin/dashboard' || item.id === '/profile').map(item => item.id === '/admin/dashboard' ? { ...item, label: 'Admin Panel' } : item)
+    : navItems;
 
+  return (
+    <aside className={`w-[272px] fixed top-0 left-0 bottom-0 z-[100] flex flex-col transition-transform duration-300 overflow-y-auto ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 bg-[#0A0F1E]/95 backdrop-blur-xl border-r border-white/[0.06]`}>
       {/* Logo */}
-      <div className="px-6 py-6 flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-violet-500 flex items-center justify-center shadow-md">
-          <Shield className="w-[18px] h-[18px] text-white" />
+      <div className="relative z-10 px-6 py-7 flex items-center gap-3.5">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#E63946] to-[#c1121f] flex items-center justify-center shadow-glow-red">
+          <Shield className="w-5 h-5 text-white" />
         </div>
-        <span className="text-[17px] font-semibold tracking-tight text-white">
-          Safe<span className="text-blue-400">Sphere</span>
-        </span>
+        <div className="font-heading text-xl font-bold tracking-tight text-[#F1FAEE] flex items-center gap-2">
+          Safe<span className="text-[#E63946]">Sphere</span>
+          <span className="w-2 h-2 rounded-full bg-[#E63946] animate-glow-dot" />
+        </div>
       </div>
 
-      {/* Nav */}
-      <nav className="px-3 flex-1 pb-4" role="navigation" aria-label="Main navigation">
-        {navItems.map((item, i) => {
+      {/* Navigation */}
+      <nav className="relative z-10 px-3 flex-1 pb-4" role="navigation" aria-label="Main navigation">
+        {filteredNavItems.map((item, i) => {
           if (item.adminOnly && role !== 'admin') return null
           if (item.section) return (
-            <div key={i} className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/20 px-4 pt-6 pb-2">{item.section}</div>
+            <div key={i} className="text-[10px] font-heading font-semibold uppercase tracking-[0.12em] text-white/30 px-4 pt-6 pb-2">{item.section}</div>
           )
           const isActive = activePage === item.id
           return (
             <button key={item.id} onClick={() => handleNav(item.id)}
               aria-current={isActive ? 'page' : undefined}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-300 mb-0.5 cursor-pointer min-h-[38px] group relative ${
-                isActive
-                  ? 'bg-white/[0.08] text-white'
-                  : 'text-white/45 hover:bg-white/[0.04] hover:text-white/70'
-              }`}>
-              {isActive && <div className="absolute left-0 w-[3px] h-4 rounded-r-full bg-blue-400" />}
-              <item.icon className={`w-[17px] h-[17px] transition-colors duration-300 flex-shrink-0 ${isActive ? 'text-blue-400' : 'text-white/30 group-hover:text-white/50'}`} />
-              <span className="flex-1 text-left truncate">{item.label}</span>
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 mb-0.5 cursor-pointer min-h-[40px] group focus-visible:outline-2 focus-visible:outline-[#E63946] focus-visible:outline-offset-2 ${isActive ? 'bg-[#E63946]/10 text-[#E63946] shadow-[inset_0_1px_0_rgba(230,57,70,0.1)]' : 'text-white/60 hover:bg-white/[0.05] hover:text-white/90'}`}>
+              <item.icon className={`w-[18px] h-[18px] transition-colors duration-200 ${isActive ? 'text-[#E63946]' : 'text-white/40 group-hover:text-white/70'}`} />
+              <span className="flex-1 text-left">{item.label}</span>
               {item.id === '/notifications' && user.unreadNotifications > 0 && (
-                <span className="w-5 h-5 text-[10px] font-bold bg-red-500 rounded-full flex items-center justify-center text-white">{user.unreadNotifications}</span>
+                <span className="w-5 h-5 text-[10px] font-bold bg-[#E63946] rounded-full flex items-center justify-center text-white">{user.unreadNotifications}</span>
               )}
-              {isActive && <ChevronRight className="w-3 h-3 text-white/25" />}
+              {isActive && <ChevronRight className="w-3.5 h-3.5 text-[#E63946]/40" />}
             </button>
           )
         })}
       </nav>
 
-      {/* Status */}
-      <div className="px-6 py-3 border-t border-white/[0.05]">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/20 mb-2.5">System</div>
-        <div className="flex items-center gap-5">
-          <StatusDot label="GPS" />
-          <StatusDot label="Network" />
-          <StatusDot label="Shield" />
+      {/* System Status */}
+      {role !== 'admin' && (
+        <div className="relative z-10 px-6 py-3 border-t border-white/[0.06]">
+          <div className="text-[10px] font-heading font-semibold uppercase tracking-[0.12em] text-white/30 mb-2">System Status</div>
+          <div className="flex items-center gap-4">
+            <StatusDot label="GPS" />
+            <StatusDot label="Network" />
+            <StatusDot label="Shield" />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* User */}
-      <div className="px-3 py-4 border-t border-white/[0.05]">
+      <div className="relative z-10 px-3 py-4 border-t border-white/[0.06]">
         <button onClick={() => handleNav('/profile')}
-          className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/[0.04] transition-all duration-300 cursor-pointer group">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-violet-500 flex items-center justify-center text-white text-xs font-semibold shadow-sm">
-            {user.initials}
-          </div>
+          className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/[0.05] transition-all duration-200 cursor-pointer min-h-[44px] group">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#E63946] to-[#c1121f] flex items-center justify-center font-heading font-semibold text-sm text-white shadow-sm">{user.initials}</div>
           <div className="text-left flex-1 min-w-0">
-            <div className="text-sm font-medium text-white/75 truncate">{user.name}</div>
-            <div className="text-[11px] text-white/30 truncate">{user.email}</div>
+            <div className="text-sm font-medium text-white/90 truncate">{user.name}</div>
+            <div className="text-[11px] text-white/40 truncate">{user.email}</div>
           </div>
         </button>
       </div>
@@ -117,10 +115,10 @@ function StatusDot({ label }) {
   return (
     <div className="flex items-center gap-1.5">
       <span className="relative flex h-1.5 w-1.5">
-        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-50" />
-        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400" />
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#06D6A0] opacity-75" />
+        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#06D6A0]" />
       </span>
-      <span className="text-[10px] text-white/30">{label}</span>
+      <span className="text-[10px] text-white/40">{label}</span>
     </div>
   )
 }
