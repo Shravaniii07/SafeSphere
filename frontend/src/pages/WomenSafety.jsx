@@ -6,12 +6,12 @@ import {
 import { Card, CardBody, Badge } from '../components/UI'
 
 const helplines = [
-  { name: 'Women Helpline', number: '1091', icon: Phone, color: 'bg-accent', desc: '24/7 women safety assistance' },
-  { name: 'Police', number: '100', icon: Shield, color: 'bg-primary', desc: 'Emergency police response' },
-  { name: 'NCW Helpline', number: '7827-170-170', icon: Users, color: 'bg-info', desc: 'National Commission for Women' },
-  { name: 'Ambulance', number: '102', icon: Heart, color: 'bg-emerald-500', desc: 'Medical emergency' },
-  { name: 'One Stop Centre', number: '181', icon: ShieldCheck, color: 'bg-secondary', desc: 'Support for women in distress' },
-  { name: 'Cyber Crime', number: '1930', icon: Wifi, color: 'bg-amber-500', desc: 'Online harassment & fraud' },
+  { name: 'Women Helpline', number: '1091', icon: Phone, gradient: 'from-red-500 to-orange-500', desc: '24/7 women safety assistance' },
+  { name: 'Police', number: '100', icon: Shield, gradient: 'from-slate-700 to-slate-900', desc: 'Emergency police response' },
+  { name: 'NCW Helpline', number: '7827-170-170', icon: Users, gradient: 'from-indigo-500 to-violet-500', desc: 'National Commission for Women' },
+  { name: 'Ambulance', number: '102', icon: Heart, gradient: 'from-emerald-500 to-teal-500', desc: 'Medical emergency' },
+  { name: 'One Stop Centre', number: '181', icon: ShieldCheck, gradient: 'from-blue-500 to-cyan-500', desc: 'Support for women in distress' },
+  { name: 'Cyber Crime', number: '1930', icon: Wifi, gradient: 'from-amber-500 to-orange-500', desc: 'Online harassment & fraud' },
 ]
 
 const tabs = [
@@ -23,24 +23,24 @@ const tabs = [
 const selfDefenseTips = [
   { title: 'Stay Aware of Surroundings', desc: 'Keep your head up and avoid distractions. Walk confidently and be mindful of exits.', icon: Eye },
   { title: 'Trust Your Instincts', desc: 'If a situation feels wrong, leave immediately. Your gut feeling is your best alarm.', icon: AlertTriangle },
-  { title: 'Carry Personal Safety Tools', desc: 'Pepper spray, whistle, or personal alarm. Keep them easily accessible, not buried in your bag.', icon: Shield },
+  { title: 'Carry Personal Safety Tools', desc: 'Pepper spray, whistle, or personal alarm. Keep them easily accessible.', icon: Shield },
   { title: 'Learn Basic Self-Defense', desc: 'Know vulnerable points: eyes, nose, throat, groin, knee. Simple moves can create escape opportunities.', icon: Zap },
-  { title: 'Keep Someone Informed', desc: 'Always tell someone where you\'re going and when you expect to return.', icon: Users },
+  { title: 'Keep Someone Informed', desc: "Always tell someone where you're going and when you expect to return.", icon: Users },
   { title: 'Use SafeSphere SOS', desc: 'Keep the app ready. One tap sends your location to all emergency contacts instantly.', icon: Smartphone },
 ]
 
 const travelTips = [
   { title: 'Share Live Location', desc: 'Always share your real-time location with trusted contacts when traveling alone.', icon: MapPin },
   { title: 'Verify Ride Details', desc: 'Check driver name, car model, and license plate before entering any ride-share vehicle.', icon: Car },
-  { title: 'Sit Behind the Driver', desc: 'Gives you control of the rear doors and keeps you out of the driver\'s direct reach.', icon: Users },
+  { title: 'Sit Behind the Driver', desc: "Gives you control of the rear doors and keeps you out of the driver's direct reach.", icon: Users },
   { title: 'Avoid Isolated Areas', desc: 'Stick to well-lit, populated routes. Avoid shortcuts through deserted areas at night.', icon: Eye },
   { title: 'Keep Emergency Contacts Ready', desc: 'Save local emergency numbers and keep your phone charged before heading out.', icon: Phone },
-  { title: 'Plan Your Route', desc: 'Use SafeSphere\'s safety map to check route safety scores before you travel.', icon: BookOpen },
+  { title: 'Plan Your Route', desc: "Use SafeSphere's safety map to check route safety scores before you travel.", icon: BookOpen },
 ]
 
 const digitalTips = [
   { title: 'Review Privacy Settings', desc: 'Regularly audit app permissions, especially location access. Disable what you don\'t need.', icon: Lock },
-  { title: 'Beware of Social Engineering', desc: 'Don\'t share personal information online. Avoid posting real-time locations on social media.', icon: AlertTriangle },
+  { title: 'Beware of Social Engineering', desc: "Don't share personal information online. Avoid posting real-time locations on social media.", icon: AlertTriangle },
   { title: 'Use Strong Passwords', desc: 'Use unique passwords for each account. Enable 2FA wherever possible.', icon: Shield },
   { title: 'Secure Your Devices', desc: 'Keep your phone locked with biometrics. Enable remote wipe for lost devices.', icon: Smartphone },
   { title: 'Know the Reporting Channels', desc: 'Report cyber harassment to cybercrime.gov.in or call 1930.', icon: Phone },
@@ -53,7 +53,6 @@ export default function WomenSafety() {
   const [activeTab, setActiveTab] = useState('selfdefense')
 
   const downloadChecklist = () => {
-    // TODO: Replace with proper PDF generation
     const content = `SafeSphere Women's Safety Checklist\n${'='.repeat(40)}\n\n` +
       'Before Going Out:\n' +
       '□ Share live location with a trusted contact\n' +
@@ -91,23 +90,23 @@ export default function WomenSafety() {
     <div className="stagger-children">
       {/* Hero */}
       <div className="relative rounded-2xl p-8 lg:p-10 text-white overflow-hidden mb-8 noise-overlay">
-        <div className="absolute inset-0 bg-gradient-to-br from-accent via-accent-dark to-[#9f1239]" />
-        <div className="absolute -top-20 -right-20 w-[300px] h-[300px] bg-white/10 rounded-full blur-3xl animate-float" />
-        <div className="absolute -bottom-20 left-20 w-[200px] h-[200px] bg-secondary/15 rounded-full blur-3xl animate-float-delayed" />
-        <div className="absolute inset-0 geo-pattern opacity-10" />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #BE123C 0%, #9F1239 50%, #7C1D3E 100%)' }} />
+        <div className="absolute -top-20 -right-20 w-[300px] h-[300px] bg-white/8 rounded-full blur-3xl animate-float" />
+        <div className="absolute -bottom-20 left-20 w-[200px] h-[200px] bg-pink-300/10 rounded-full blur-3xl animate-float-delayed" />
+        <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <ShieldCheck className="w-5 h-5 text-white/80" />
-              <span className="text-white/80 text-sm font-display font-semibold tracking-wide uppercase">Safety Resources</span>
+              <div className="flex items-center gap-2 px-3 py-1 bg-white/[0.08] backdrop-blur-sm rounded-lg border border-white/[0.06]">
+                <ShieldCheck className="w-3.5 h-3.5 text-pink-200" />
+                <span className="text-pink-200 text-xs font-display font-semibold tracking-wide">Safety Resources</span>
+              </div>
             </div>
             <h2 className="text-2xl lg:text-3xl font-display font-bold mb-2 tracking-tight">Women's Safety Guide</h2>
-            <p className="text-white/60 text-sm max-w-md">Empowering you with knowledge, tools, and resources to stay safe in every situation.</p>
+            <p className="text-white/50 text-sm max-w-md">Empowering you with knowledge, tools, and resources to stay safe.</p>
           </div>
-          <button
-            onClick={downloadChecklist}
-            className="inline-flex items-center gap-2 px-5 py-3 bg-white/15 backdrop-blur-sm border border-white/20 rounded-xl text-white font-display font-semibold text-sm hover:bg-white/25 active:scale-[0.96] transition-all cursor-pointer shrink-0"
-          >
+          <button onClick={downloadChecklist}
+            className="inline-flex items-center gap-2 px-5 py-3 bg-white/10 backdrop-blur-sm border border-white/15 rounded-xl text-white font-display font-semibold text-sm hover:bg-white/20 active:scale-[0.96] transition-all cursor-pointer shrink-0">
             <Download className="w-4 h-4" /> Download Checklist
           </button>
         </div>
@@ -116,15 +115,12 @@ export default function WomenSafety() {
       {/* Tabs */}
       <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
         {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium border transition-all duration-200 cursor-pointer whitespace-nowrap min-h-[44px] ${
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium border transition-all duration-200 cursor-pointer whitespace-nowrap min-h-[44px] ${
               activeTab === tab.id
-                ? 'bg-primary text-white border-primary shadow-[0_2px_8px_rgba(15,23,42,0.2)]'
-                : 'bg-white text-slate-500 border-slate-200 hover:border-primary hover:text-primary hover:shadow-sm'
-            }`}
-          >
+                ? 'bg-primary text-white border-primary shadow-[0_2px_10px_rgba(15,23,42,0.15)]'
+                : 'bg-white text-slate-500 border-slate-200 hover:border-primary/30 hover:text-primary hover:shadow-sm'
+            }`}>
             <tab.icon className="w-4 h-4" />
             {tab.label}
           </button>
@@ -137,12 +133,12 @@ export default function WomenSafety() {
           <Card key={i}>
             <CardBody>
               <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
-                  <tip.icon className="w-5 h-5 text-accent" />
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500/10 to-pink-500/10 flex items-center justify-center shrink-0">
+                  <tip.icon className="w-5 h-5 text-red-500" />
                 </div>
                 <div>
                   <h4 className="text-sm font-display font-bold text-primary mb-1">{tip.title}</h4>
-                  <p className="text-xs text-slate-500 leading-relaxed">{tip.desc}</p>
+                  <p className="text-xs text-slate-400 leading-relaxed">{tip.desc}</p>
                 </div>
               </div>
             </CardBody>
@@ -150,19 +146,16 @@ export default function WomenSafety() {
         ))}
       </div>
 
-      {/* Helpline Numbers */}
-      <div className="mb-4">
+      {/* Helplines */}
+      <div className="mb-5">
         <h3 className="text-lg font-display font-bold text-primary mb-1">Emergency Helplines</h3>
-        <p className="text-sm text-slate-500 mb-5">Tap any number to call directly</p>
+        <p className="text-sm text-slate-400 mb-5">Tap any number to call directly</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {helplines.map((h, i) => (
-          <a
-            key={i}
-            href={`tel:${h.number}`}
-            className="group flex items-center gap-4 p-4 bg-white rounded-xl border border-slate-100/80 shadow-elevated card-hover no-underline"
-          >
-            <div className={`w-12 h-12 rounded-xl ${h.color} flex items-center justify-center shadow-sm shrink-0`}>
+          <a key={i} href={`tel:${h.number}`}
+            className="group flex items-center gap-4 p-4 bg-white rounded-xl border border-slate-200/60 shadow-card card-interactive no-underline">
+            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${h.gradient} flex items-center justify-center shadow-md shrink-0`}>
               <h.icon className="w-6 h-6 text-white" />
             </div>
             <div className="flex-1 min-w-0">
