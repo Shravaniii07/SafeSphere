@@ -72,10 +72,6 @@ export function AppProvider({ children }) {
     }
   }, [authUser, role, fetchNotifs, fetchDashboardStats])
 
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', settings.darkMode)
-  }, [settings.darkMode])
-
   return (
     <AppContext.Provider value={{ 
       user, setUser, 

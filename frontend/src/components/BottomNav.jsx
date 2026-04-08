@@ -21,7 +21,7 @@ export default function BottomNav() {
   const filteredItems = role === 'admin' ? navItems.filter(item => !item.isSos) : navItems
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[100] bg-[#0A0F1E]/95 backdrop-blur-xl border-t border-white/10 px-2 pb-[env(safe-area-inset-bottom)]"
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[100] bg-sidebar backdrop-blur-xl border-t border-border px-2 pb-[env(safe-area-inset-bottom)]"
       role="navigation" aria-label="Mobile navigation">
       <div className="flex items-end justify-around h-16">
         {filteredItems.map(item => {
@@ -29,7 +29,7 @@ export default function BottomNav() {
           if (item.isSos) {
             return (
               <button key={item.id} onClick={() => navigate(item.id)}
-                className="relative -top-3 w-14 h-14 rounded-full bg-[#E63946] text-white flex items-center justify-center shadow-glow-red active:scale-90 transition-all cursor-pointer animate-danger-pulse min-h-[48px] min-w-[48px]"
+                className="relative -top-3 w-14 h-14 rounded-full bg-primary text-white flex items-center justify-center shadow-glow-red active:scale-90 transition-all cursor-pointer animate-danger-pulse min-h-[48px] min-w-[48px]"
                 aria-label="Emergency SOS">
                 <AlertTriangle className="w-6 h-6" />
               </button>
@@ -37,16 +37,16 @@ export default function BottomNav() {
           }
           return (
             <button key={item.id} onClick={() => navigate(item.id)}
-              className={`flex flex-col items-center justify-center gap-0.5 py-2 px-3 min-w-[56px] min-h-[48px] transition-colors cursor-pointer ${isActive ? 'text-[#E63946]' : 'text-[#A8B2C1]/60'}`}
+              className={`flex flex-col items-center justify-center gap-0.5 py-2 px-3 min-w-[56px] min-h-[48px] transition-colors cursor-pointer ${isActive ? 'text-primary' : 'text-muted/60'}`}
               aria-current={isActive ? 'page' : undefined}>
               <div className="relative">
                 <item.icon className="w-5 h-5" />
                 {item.id === '/notifications' && user.unreadNotifications > 0 && (
-                  <span className="absolute -top-1 -right-1.5 w-3.5 h-3.5 bg-[#E63946] text-white text-[8px] font-bold rounded-full flex items-center justify-center">{user.unreadNotifications}</span>
+                  <span className="absolute -top-1 -right-1.5 w-3.5 h-3.5 bg-primary text-white text-[8px] font-bold rounded-full flex items-center justify-center">{user.unreadNotifications}</span>
                 )}
               </div>
               <span className="text-[10px] font-medium">{item.label}</span>
-              {isActive && <span className="w-1 h-1 rounded-full bg-[#E63946]" />}
+              {isActive && <span className="w-1 h-1 rounded-full bg-primary" />}
             </button>
           )
         })}

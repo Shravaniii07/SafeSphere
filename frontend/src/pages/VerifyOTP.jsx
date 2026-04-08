@@ -97,9 +97,9 @@ export default function VerifyOTP() {
     <div className="min-h-screen flex items-center justify-center p-4 login-gradient relative overflow-hidden">
       {/* Animated background shapes */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-[500px] h-[500px] bg-[#E63946]/8 rounded-full blur-3xl animate-float" />
-        <div className="absolute -bottom-40 -left-40 w-[400px] h-[400px] bg-[#457B9D]/8 rounded-full blur-3xl animate-float-delayed" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#1D3557]/20 rounded-full blur-3xl" />
+        <div className="absolute -top-40 -right-40 w-[500px] h-[500px] bg-primary/8 rounded-full blur-3xl animate-float" />
+        <div className="absolute -bottom-40 -left-40 w-[400px] h-[400px] bg-accent/8 rounded-full blur-3xl animate-float-delayed" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-secondary/20 rounded-full blur-3xl" />
         <div className="absolute inset-0 geo-pattern opacity-[0.03]" />
       </div>
 
@@ -110,17 +110,17 @@ export default function VerifyOTP() {
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#E63946] to-[#c1121f] flex items-center justify-center shadow-glow-red">
               <Shield className="w-6 h-6 text-white" />
             </div>
-            <span className="font-heading text-2xl font-bold tracking-tight text-[#F1FAEE] flex items-center gap-2">
-              Safe<span className="text-[#E63946]">Sphere</span>
-              <span className="w-2 h-2 rounded-full bg-[#E63946] animate-glow-dot" />
+            <span className="font-heading text-2xl font-bold tracking-tight text-text flex items-center gap-2">
+              Safe<span className="text-primary">Sphere</span>
+              <span className="w-2 h-2 rounded-full bg-primary animate-glow-dot" />
             </span>
           </div>
-          <h1 className="text-xl font-heading font-bold text-[#F1FAEE] mb-1">Verify your email</h1>
-          <p className="text-[#A8B2C1] text-sm">We've sent a 6-digit code to <span className="font-medium text-[#F1FAEE]">{email}</span></p>
+          <h1 className="text-xl font-heading font-bold text-text mb-1">Verify your email</h1>
+          <p className="text-muted text-sm">We've sent a 6-digit code to <span className="font-medium text-text">{email}</span></p>
         </div>
 
         {/* OTP Card */}
-        <div className="bg-[#111827]/90 backdrop-blur-xl rounded-2xl shadow-elevated border border-white/10 p-8 animate-scale-pop">
+        <div className="bg-surface/90 backdrop-blur-xl rounded-2xl shadow-elevated border border-border p-8 animate-scale-pop">
           <form onSubmit={onSubmit} className="space-y-6">
             <div className="flex justify-between gap-2">
               {otp.map((data, index) => (
@@ -132,7 +132,7 @@ export default function VerifyOTP() {
                   onChange={(e) => handleChange(e.target, index)}
                   onKeyDown={(e) => handleKeyDown(e, index)}
                   onFocus={(e) => e.target.select()}
-                  className="w-12 h-14 text-center text-xl font-bold bg-[#1F2937] border-2 border-white/10 rounded-xl text-[#F1FAEE] focus:border-[#E63946] focus:ring-4 focus:ring-[#E63946]/10 focus:outline-none transition-all duration-200"
+                  className="w-12 h-14 text-center text-xl font-bold bg-surface2 border-2 border-border rounded-xl text-text focus:border-primary focus:ring-4 focus:ring-primary/10 focus:outline-none transition-all duration-200"
                 />
               ))}
             </div>
@@ -140,7 +140,7 @@ export default function VerifyOTP() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-[#E63946] text-white font-heading font-semibold rounded-xl hover:bg-[#c1121f] hover:shadow-glow-red hover:-translate-y-px active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-primary text-white font-heading font-semibold rounded-xl hover:bg-primary-dark hover:shadow-glow-red hover:-translate-y-px active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {isLoading ? (
                 <>
@@ -159,15 +159,15 @@ export default function VerifyOTP() {
           </form>
 
           <div className="text-center mt-6">
-            <p className="text-sm text-[#A8B2C1]">
+            <p className="text-sm text-muted">
               Didn't receive the code?{' '}
               {timeLeft > 0 ? (
-                <span className="font-medium text-[#A8B2C1]/60 cursor-not-allowed">Resend in {timeLeft}s</span>
+                <span className="font-medium text-muted/60 cursor-not-allowed">Resend in {timeLeft}s</span>
               ) : (
                 <button 
                   type="button" 
                   disabled={isResending}
-                  className="text-[#E63946] hover:text-[#FF4D5A] font-medium transition-colors cursor-pointer disabled:opacity-50" 
+                  className="text-primary hover:text-[#FF4D5A] font-medium transition-colors cursor-pointer disabled:opacity-50" 
                   onClick={async () => {
                     if (!email) return;
                     setIsResending(true)
@@ -190,8 +190,8 @@ export default function VerifyOTP() {
 
         {/* Back to login */}
         <div className="text-center mt-6 animate-fade-in">
-          <Link to="/login" className="inline-flex items-center gap-2 text-sm text-[#A8B2C1]/60 hover:text-[#F1FAEE] transition-colors group">
-            <KeyRound className="w-4 h-4 group-hover:text-[#E63946] transition-colors" />
+          <Link to="/login" className="inline-flex items-center gap-2 text-sm text-muted/60 hover:text-text transition-colors group">
+            <KeyRound className="w-4 h-4 group-hover:text-primary transition-colors" />
             Back to Login
           </Link>
         </div>

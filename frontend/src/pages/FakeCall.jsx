@@ -192,12 +192,12 @@ export default function FakeCall() {
             <div className="absolute inset-0 rounded-full bg-emerald-400/20 animate-sos-ring" />
             <div className="absolute inset-0 rounded-full bg-emerald-400/15 animate-sos-ring animate-sos-ring-2" />
             <div className="absolute inset-0 rounded-full bg-emerald-400/10 animate-sos-ring animate-sos-ring-3" />
-            <div className="relative w-28 h-28 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center text-5xl shadow-2xl border border-white/10">
+            <div className="relative w-28 h-28 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center text-5xl shadow-2xl border border-border">
               {selectedPreset?.avatar || '👤'}
             </div>
           </div>
           <h2 className="text-3xl font-display font-bold text-white tracking-tight mb-1">{displayName}</h2>
-          <p className="text-white/40 text-sm font-mono animate-pulse-status">Mobile · Ringing...</p>
+          <p className="text-text-secondary text-sm font-mono animate-pulse-status">Mobile · Ringing...</p>
         </div>
 
         <div className="flex items-center gap-12 mb-8">
@@ -255,7 +255,7 @@ export default function FakeCall() {
         <div className="text-center animate-scale-pop">
           <PhoneOff className="w-12 h-12 text-accent mx-auto mb-3" />
           <h2 className="text-xl font-display font-bold text-white">Call Ended</h2>
-          <p className="text-white/40 text-sm mt-1">{displayName} · {formatTime(callDuration)}</p>
+          <p className="text-text-secondary text-sm mt-1">{displayName} · {formatTime(callDuration)}</p>
         </div>
       </div>
     )
@@ -380,12 +380,12 @@ export default function FakeCall() {
                 <div className="bg-gradient-to-b from-slate-800 to-slate-900 rounded-2xl p-6 text-center relative overflow-hidden">
                   <div className="absolute inset-0 geo-pattern opacity-5" />
                   <div className="relative z-10">
-                    <p className="text-white/40 text-xs mb-3">Incoming Call</p>
+                    <p className="text-text-secondary text-xs mb-3">Incoming Call</p>
                     <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${selectedPreset?.color || 'from-slate-600 to-slate-700'} flex items-center justify-center text-3xl mx-auto mb-3 shadow-lg`}>
                       {selectedPreset?.avatar || '👤'}
                     </div>
                     <h3 className="text-lg font-display font-bold text-white">{displayName}</h3>
-                    <p className="text-white/30 text-xs font-mono mt-0.5">Mobile · Ringing...</p>
+                    <p className="text-muted/50 text-xs font-mono mt-0.5">Mobile · Ringing...</p>
                     <div className="flex items-center justify-center gap-6 mt-5">
                       <div className="w-10 h-10 rounded-full bg-accent/80 flex items-center justify-center">
                         <PhoneOff className="w-4 h-4 text-white" />
@@ -410,10 +410,10 @@ export default function FakeCall() {
 function CallButton({ icon: Icon, label, active, onClick }) {
   return (
     <button onClick={onClick} className="flex flex-col items-center gap-2 cursor-pointer group">
-      <div className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${active ? 'bg-white text-emerald-800' : 'bg-white/10 text-white hover:bg-white/20'}`}>
+      <div className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${active ? 'bg-white text-emerald-800' : 'bg-overlay-strong text-white hover:bg-white/20'}`}>
         <Icon className="w-6 h-6" />
       </div>
-      <span className="text-xs text-white/60">{label}</span>
+      <span className="text-xs text-muted">{label}</span>
     </button>
   )
 }

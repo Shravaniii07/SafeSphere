@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { AppProvider } from './context/AppContext'
+import { ThemeProvider } from './context/ThemeContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import PublicRoute from './components/PublicRoute'
 import AppLayout from './components/AppLayout'
@@ -38,6 +39,7 @@ import SafetyTips from './pages/SafetyTips'
 export default function App() {
   return (
     <BrowserRouter>
+      <ThemeProvider>
       <AuthProvider>
         <AppProvider>
           <Routes>
@@ -103,6 +105,7 @@ export default function App() {
           </Routes>
         </AppProvider>
       </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   )
 }

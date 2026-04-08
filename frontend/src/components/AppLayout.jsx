@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast'
 import Sidebar from './Sidebar'
 import Navbar from './Navbar'
 import BottomNav from './BottomNav'
+import { useTheme } from '../context/ThemeContext'
 
 const pageTitles = {
   '/dashboard': 'Dashboard',
@@ -37,6 +38,7 @@ export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const location = useLocation()
   const pathname = location.pathname
+  const { isDark } = useTheme()
 
   const title = pageTitles[pathname] || 'SafeSphere'
   const bgClass = pageTints[pathname] || 'mesh-gradient'
@@ -50,10 +52,10 @@ export default function AppLayout() {
           fontSize: '14px', 
           fontWeight: '500', 
           padding: '14px 18px', 
-          boxShadow: '0 8px 32px rgba(0,0,0,0.3)', 
-          border: '1px solid rgba(255,255,255,0.1)', 
-          background: '#111827',
-          color: '#F1FAEE',
+          boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.3)' : '0 8px 32px rgba(0,0,0,0.1)', 
+          border: '1px solid var(--color-border)', 
+          background: 'var(--color-surface)',
+          color: 'var(--color-text)',
         },
         success: { duration: 3000 },
         error: { duration: 4000 },

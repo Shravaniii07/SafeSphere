@@ -6,9 +6,9 @@ import toast from 'react-hot-toast'
 import api from '../api/api'
 
 const iconMap = {
-  SOS: { icon: AlertTriangle, color: 'bg-[#E63946]/10 text-[#E63946]', border: 'border-[#E63946]/20', label: 'SOS Alert' },
-  INFO: { icon: Info, color: 'bg-[#457B9D]/10 text-[#457B9D]', border: 'border-[#457B9D]/20', label: 'System Info' },
-  ALERT: { icon: Megaphone, color: 'bg-[#FFB703]/10 text-[#FFB703]', border: 'border-[#FFB703]/20', label: 'Official Alert' },
+  SOS: { icon: AlertTriangle, color: 'bg-primary/10 text-primary', border: 'border-primary/20', label: 'SOS Alert' },
+  INFO: { icon: Info, color: 'bg-accent/10 text-accent', border: 'border-accent/20', label: 'System Info' },
+  ALERT: { icon: Megaphone, color: 'bg-warning/10 text-warning', border: 'border-[#FFB703]/20', label: 'Official Alert' },
 }
 
 function formatTimeAgo(timestamp) {
@@ -73,7 +73,7 @@ export default function Notifications() {
         (t) => (
           <span className="flex items-center gap-3">
             Notification dismissed
-            <button className="text-[#E63946] font-semibold underline cursor-pointer" onClick={() => {
+            <button className="text-primary font-semibold underline cursor-pointer" onClick={() => {
               setNotifications(prev => [...prev, removed].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)))
               toast.dismiss(t.id)
               toast.error("Note: Undo is temporary and won't persist after refresh", { id: 'undo-warn' })
@@ -99,7 +99,7 @@ export default function Notifications() {
         (t) => (
           <span className="flex items-center gap-3">
             All notifications cleared
-            <button className="text-[#E63946] font-semibold underline cursor-pointer" onClick={() => {
+            <button className="text-primary font-semibold underline cursor-pointer" onClick={() => {
               setNotifications(old)
               toast.dismiss(t.id)
               toast.error("Note: Undo is temporary and won't persist after refresh", { id: 'undo-warn' })
@@ -118,8 +118,8 @@ export default function Notifications() {
     <div className="stagger-children">
       <div className="flex items-start justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-heading font-bold text-[#F1FAEE] tracking-tight mb-1">Notifications</h1>
-          <p className="text-[#A8B2C1] text-sm">
+          <h1 className="text-2xl font-heading font-bold text-text tracking-tight mb-1">Notifications</h1>
+          <p className="text-muted text-sm">
             {unreadCount > 0 ? `You have ${unreadCount} unread notification${unreadCount > 1 ? 's' : ''}` : "You're all caught up!"}
           </p>
         </div>
@@ -131,10 +131,10 @@ export default function Notifications() {
       {/* Action bar */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex gap-2">
-          <button onClick={() => setFilter('all')} className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer ${filter === 'all' ? 'bg-[#E63946] text-white shadow-[0_0_15px_rgba(230,57,70,0.2)]' : 'bg-[#111827] border border-white/10 text-[#A8B2C1] hover:bg-white/5'}`}>
+          <button onClick={() => setFilter('all')} className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer ${filter === 'all' ? 'bg-primary text-white shadow-[0_0_15px_rgba(230,57,70,0.2)]' : 'bg-surface border border-border text-muted hover:bg-overlay'}`}>
             All ({notifications.length})
           </button>
-          <button onClick={() => setFilter('unread')} className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer ${filter === 'unread' ? 'bg-[#E63946] text-white shadow-[0_0_15px_rgba(230,57,70,0.2)]' : 'bg-[#111827] border border-white/10 text-[#A8B2C1] hover:bg-white/5'}`}>
+          <button onClick={() => setFilter('unread')} className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer ${filter === 'unread' ? 'bg-primary text-white shadow-[0_0_15px_rgba(230,57,70,0.2)]' : 'bg-surface border border-border text-muted hover:bg-overlay'}`}>
             Unread ({unreadCount})
           </button>
         </div>
@@ -165,9 +165,9 @@ export default function Notifications() {
                 return (
                   <div
                     key={n._id}
-                    className={`group flex items-start gap-4 p-4 rounded-xl transition-all duration-200 cursor-pointer hover:bg-white/[0.03] ${
+                    className={`group flex items-start gap-4 p-4 rounded-xl transition-all duration-200 cursor-pointer hover:bg-overlay ${
                       !n.read
-                        ? 'bg-[#E63946]/[0.03] border border-[#E63946]/10'
+                        ? 'bg-primary/[0.03] border border-primary/10'
                         : 'border border-transparent'
                     }`}
                     onClick={() => markAsRead(n._id)}
@@ -177,16 +177,16 @@ export default function Notifications() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <h5 className="text-sm font-heading font-semibold text-[#F1FAEE]">{cfg.label}</h5>
-                        {!n.read && <span className="w-2 h-2 rounded-full bg-[#E63946] flex-shrink-0" />}
+                        <h5 className="text-sm font-heading font-semibold text-text">{cfg.label}</h5>
+                        {!n.read && <span className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />}
                       </div>
-                      <p className="text-xs text-[#A8B2C1] leading-relaxed">{n.message}</p>
+                      <p className="text-xs text-muted leading-relaxed">{n.message}</p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-[11px] text-[#A8B2C1]/60 font-mono whitespace-nowrap">{formatTimeAgo(n.createdAt)}</span>
+                      <span className="text-[11px] text-muted/60 font-mono whitespace-nowrap">{formatTimeAgo(n.createdAt)}</span>
                       <button
                         onClick={(e) => { e.stopPropagation(); dismissNotif(n._id) }}
-                        className="p-1.5 rounded-lg text-[#A8B2C1]/40 hover:bg-[#E63946]/10 hover:text-[#E63946] transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+                        className="p-1.5 rounded-lg text-muted/40 hover:bg-primary/10 hover:text-primary transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
                         aria-label="Dismiss"
                       >
                         <Trash2 className="w-3.5 h-3.5" />

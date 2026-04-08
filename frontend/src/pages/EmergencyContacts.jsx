@@ -183,7 +183,7 @@ export default function EmergencyContacts() {
             )}
           </div>
           
-          <form onSubmit={handleAddContact} className="flex flex-wrap gap-3 p-4 bg-white/50 rounded-xl border border-dashed border-secondary/30">
+          <form onSubmit={handleAddContact} className="flex flex-wrap gap-3 p-4 bg-overlay0 rounded-xl border border-dashed border-secondary/30">
             <input type="text" placeholder="Name" required value={newContact.name} onChange={e => setNewContact({...newContact, name: e.target.value})} className="px-3 py-2 text-sm border border-slate-200 rounded-lg flex-1 min-w-[150px]" />
             <input type="text" placeholder="Phone" required value={newContact.phone} onChange={e => setNewContact({...newContact, phone: e.target.value})} className="px-3 py-2 text-sm border border-slate-200 rounded-lg flex-1 min-w-[150px]" />
             <input type="email" placeholder="Email" required value={newContact.email} onChange={e => setNewContact({...newContact, email: e.target.value})} className="px-3 py-2 text-sm border border-slate-200 rounded-lg flex-1 min-w-[120px]" />

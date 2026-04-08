@@ -34,7 +34,7 @@ function SafetyScoreRing({ score }) {
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-2xl font-bold tracking-tight" style={{ color }}>{score}</span>
-        <span className="text-[10px] text-[#A8B2C1]">/ 100</span>
+        <span className="text-[10px] text-muted">/ 100</span>
       </div>
     </div>
   )
@@ -61,7 +61,7 @@ function getRecentActivity() {
   const trips = getTripHistory()
   trips.slice(0, 3).forEach(trip => {
     activities.push({
-      color: 'bg-[#06D6A0]',
+      color: 'bg-success',
       text: 'Safe trip completed',
       desc: `${trip.from?.split(',')[0] || 'From'} → ${trip.to?.split(',')[0] || 'To'} (${trip.distance} km)`,
       time: formatTimeAgo(trip.startTime),
@@ -72,14 +72,14 @@ function getRecentActivity() {
     const contacts = JSON.parse(localStorage.getItem('safesphere_emergency_contacts') || '[]')
     if (contacts.length > 3) {
       const latest = contacts[contacts.length - 1]
-      activities.push({ color: 'bg-[#457B9D]', text: 'Emergency contact added', desc: `Added ${latest.name}`, time: 'Recently' })
+      activities.push({ color: 'bg-accent', text: 'Emergency contact added', desc: `Added ${latest.name}`, time: 'Recently' })
     }
   } catch { /* ignore */ }
 
   if (activities.length === 0) {
     activities.push(
-      { color: 'bg-[#457B9D]', text: 'SafeSphere activated', desc: 'Your safety dashboard is now live', time: 'Just now' },
-      { color: 'bg-[#E63946]', text: 'Profile created', desc: 'Set up your emergency contacts to get started', time: 'Today' },
+      { color: 'bg-accent', text: 'SafeSphere activated', desc: 'Your safety dashboard is now live', time: 'Just now' },
+      { color: 'bg-primary', text: 'Profile created', desc: 'Set up your emergency contacts to get started', time: 'Today' },
     )
   }
   return activities
@@ -119,46 +119,46 @@ export default function Dashboard() {
     <div className="stagger-children">
       {/* Welcome */}
       <div className="relative rounded-2xl p-8 lg:p-10 text-white overflow-hidden mb-8 noise-overlay">
-        <div className="absolute inset-0 bg-gradient-to-r from-[#1D3557] via-[#111827] to-[#1D3557]" />
-        <div className="absolute -top-20 -right-20 w-[350px] h-[350px] bg-[#E63946]/10 rounded-full blur-[80px]" />
-        <div className="absolute -bottom-20 left-20 w-[250px] h-[250px] bg-[#457B9D]/8 rounded-full blur-[60px]" />
+        <div className="absolute inset-0 bg-gradient-to-r from-secondary via-surface to-secondary" />
+        <div className="absolute -top-20 -right-20 w-[350px] h-[350px] bg-primary/10 rounded-full blur-[80px]" />
+        <div className="absolute -bottom-20 left-20 w-[250px] h-[250px] bg-accent/8 rounded-full blur-[60px]" />
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-4">
-            <div className="flex items-center gap-2 px-3 py-1 bg-white/[0.06] rounded-full border border-white/[0.06]">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#06D6A0] animate-pulse" />
-              <span className="text-[#06D6A0] text-xs font-medium">Systems Active</span>
+            <div className="flex items-center gap-2 px-3 py-1 bg-overlay rounded-full border border-border">
+              <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+              <span className="text-success text-xs font-medium">Systems Active</span>
             </div>
           </div>
           <h2 className="text-2xl lg:text-3xl font-heading font-bold mb-2 tracking-tight">{getGreeting()}, {user.name.split(' ')[0]}</h2>
-          <p className="text-white/40 text-sm max-w-lg">Your safety dashboard is active. All systems operating normally.</p>
+          <p className="text-text-secondary text-sm max-w-lg">Your safety dashboard is active. All systems operating normally.</p>
         </div>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <DashStatCard label="Active Contacts" value={String(contactCount)} icon={Users} color="text-[#457B9D]" />
-        <DashStatCard label="Location Shares" value={String(Math.min(contactCount, 3))} icon={Globe} color="text-[#E63946]" />
-        <DashStatCard label="Trips Completed" value={String(tripCount)} icon={TrendingUp} color="text-[#06D6A0]" />
-        <div className="bg-[#111827] rounded-2xl border border-white/10 p-5 shadow-card card-interactive flex items-center gap-4">
+        <DashStatCard label="Active Contacts" value={String(contactCount)} icon={Users} color="text-accent" />
+        <DashStatCard label="Location Shares" value={String(Math.min(contactCount, 3))} icon={Globe} color="text-primary" />
+        <DashStatCard label="Trips Completed" value={String(tripCount)} icon={TrendingUp} color="text-success" />
+        <div className="bg-surface rounded-2xl border border-border p-5 shadow-card card-interactive flex items-center gap-4">
           <SafetyScoreRing score={safetyScore} />
           <div>
-            <div className="text-xs text-[#A8B2C1] font-medium">Safety Score</div>
-            <div className="text-[11px] text-[#A8B2C1]/60 mt-0.5">{safetyScore > 80 ? 'Excellent' : safetyScore >= 60 ? 'Good' : 'Needs work'}</div>
+            <div className="text-xs text-muted font-medium">Safety Score</div>
+            <div className="text-[11px] text-muted/60 mt-0.5">{safetyScore > 80 ? 'Excellent' : safetyScore >= 60 ? 'Good' : 'Needs work'}</div>
           </div>
         </div>
       </div>
 
       {/* Action Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <ActionCard icon={AlertTriangle} iconBg="bg-gradient-to-br from-[#E63946] to-[#c1121f]" title="SOS Alert" desc="Trigger emergency alert" onClick={() => navigate('/sos')} />
-        <ActionCard icon={Globe} iconBg="bg-gradient-to-br from-[#457B9D] to-[#1D3557]" title="Share Location" desc="Real-time GPS sharing" onClick={() => navigate('/location')} />
-        <ActionCard icon={Activity} iconBg="bg-gradient-to-br from-[#FFB703] to-[#F59E0B]" title="Emergency Info" desc="Medical & contact details" onClick={() => navigate('/emergency')} />
+        <ActionCard icon={AlertTriangle} iconBg="bg-gradient-to-br from-primary to-primary-dark" title="SOS Alert" desc="Trigger emergency alert" onClick={() => navigate('/sos')} />
+        <ActionCard icon={Globe} iconBg="bg-gradient-to-br from-accent to-secondary" title="Share Location" desc="Real-time GPS sharing" onClick={() => navigate('/location')} />
+        <ActionCard icon={Activity} iconBg="bg-gradient-to-br from-warning to-[#F59E0B]" title="Emergency Info" desc="Medical & contact details" onClick={() => navigate('/emergency')} />
       </div>
 
       {/* Activity */}
       <Card>
         <CardHeader>
-          <h3 className="text-[15px] font-heading font-semibold text-[#F1FAEE]">Recent Activity</h3>
+          <h3 className="text-[15px] font-heading font-semibold text-text">Recent Activity</h3>
           <Badge dot>Today</Badge>
         </CardHeader>
         <CardBody className="stagger-children">
@@ -177,30 +177,30 @@ export default function Dashboard() {
 
 function DashStatCard({ label, value, icon: Icon, color }) {
   return (
-    <div className="bg-[#111827] rounded-2xl border border-white/10 p-5 shadow-card card-interactive">
+    <div className="bg-surface rounded-2xl border border-border p-5 shadow-card card-interactive">
       <div className="flex items-center gap-3 mb-3">
-        <div className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center">
+        <div className="w-9 h-9 rounded-xl bg-overlay flex items-center justify-center">
           <Icon className={`w-4 h-4 ${color}`} />
         </div>
       </div>
       <div className={`text-2xl font-heading font-bold ${color} mb-0.5 tracking-tight`}>{value}</div>
-      <div className="text-xs text-[#A8B2C1]">{label}</div>
+      <div className="text-xs text-muted">{label}</div>
     </div>
   )
 }
 
 function ActionCard({ icon: Icon, iconBg, title, desc, onClick }) {
   return (
-    <button onClick={onClick} className="group bg-[#111827] rounded-2xl border border-white/10 shadow-card p-6 text-left cursor-pointer card-interactive relative overflow-hidden">
+    <button onClick={onClick} className="group bg-surface rounded-2xl border border-border shadow-card p-6 text-left cursor-pointer card-interactive relative overflow-hidden">
       <div className="relative z-10">
         <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 ${iconBg} shadow-lg`}>
           <Icon className="w-5 h-5 text-white" />
         </div>
         <div className="flex items-center justify-between mb-1">
-          <h4 className="text-[15px] font-heading font-semibold text-[#F1FAEE]">{title}</h4>
-          <ArrowUpRight className="w-4 h-4 text-[#A8B2C1]/40 group-hover:text-[#E63946] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all duration-300" />
+          <h4 className="text-[15px] font-heading font-semibold text-text">{title}</h4>
+          <ArrowUpRight className="w-4 h-4 text-muted/40 group-hover:text-primary group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all duration-300" />
         </div>
-        <p className="text-sm text-[#A8B2C1]">{desc}</p>
+        <p className="text-sm text-muted">{desc}</p>
       </div>
     </button>
   )
@@ -208,15 +208,15 @@ function ActionCard({ icon: Icon, iconBg, title, desc, onClick }) {
 
 function ActivityItem({ color, text, desc, time, last }) {
   return (
-    <div className={`flex items-start gap-4 py-4 ${!last ? 'border-b border-white/[0.06]' : ''}`}>
+    <div className={`flex items-start gap-4 py-4 ${!last ? 'border-b border-border' : ''}`}>
       <div className="relative mt-1.5">
         <div className={`w-2 h-2 rounded-full ${color}`} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-[#F1FAEE]">{text}</p>
-        <p className="text-xs text-[#A8B2C1] mt-0.5">{desc}</p>
+        <p className="text-sm font-medium text-text">{text}</p>
+        <p className="text-xs text-muted mt-0.5">{desc}</p>
       </div>
-      <span className="text-[11px] text-[#A8B2C1]/60 font-mono whitespace-nowrap">{time}</span>
+      <span className="text-[11px] text-muted/60 font-mono whitespace-nowrap">{time}</span>
     </div>
   )
 }

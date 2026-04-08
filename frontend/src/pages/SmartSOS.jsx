@@ -6,7 +6,7 @@ import api from '../api/api'
 
 function HeartbeatLine() {
   return (
-    <svg viewBox="0 0 200 40" className="w-48 h-8 text-[#E63946]/40">
+    <svg viewBox="0 0 200 40" className="w-48 h-8 text-primary/40">
       <path d="M0 20 L40 20 L50 8 L60 32 L70 12 L80 28 L90 20 L200 20"
         fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
         style={{ strokeDasharray: 200, animation: 'heartbeat-line 2s linear infinite' }} />
@@ -77,18 +77,18 @@ export default function SmartSOS() {
 
       <div className="relative z-10 flex flex-col items-center justify-center min-h-[65vh] gap-10 stagger-children">
         <div className="text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#E63946]/10 rounded-full text-[#E63946] text-xs font-heading font-semibold mb-4 border border-[#E63946]/20">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-full text-primary text-xs font-heading font-semibold mb-4 border border-primary/20">
             <Wifi className="w-3 h-3" /> {isCountingDown ? 'SENDING IN...' : 'EMERGENCY MODE READY'}
           </div>
-          <h1 className="text-3xl lg:text-4xl font-heading font-bold text-[#F1FAEE] tracking-tight mb-2">Emergency SOS</h1>
-          <p className="text-[#A8B2C1] max-w-sm mx-auto">Press the button to immediately alert your emergency contacts with your location</p>
+          <h1 className="text-3xl lg:text-4xl font-heading font-bold text-text tracking-tight mb-2">Emergency SOS</h1>
+          <p className="text-muted max-w-sm mx-auto">Press the button to immediately alert your emergency contacts with your location</p>
         </div>
 
         {/* SOS Button — Massive circular with pulsing red ring */}
         <div className="relative flex items-center justify-center">
-          <div className={`absolute w-[240px] h-[240px] rounded-full border-2 border-[#E63946]/30 opacity-0 ${isCountingDown ? 'animate-sos-ring-fast' : 'animate-sos-ring'}`} />
-          <div className={`absolute w-[240px] h-[240px] rounded-full border-2 border-[#E63946]/20 opacity-0 ${isCountingDown ? 'animate-sos-ring-fast' : 'animate-sos-ring'} animate-sos-ring-2`} />
-          <div className={`absolute w-[240px] h-[240px] rounded-full border-2 border-[#E63946]/10 opacity-0 ${isCountingDown ? 'animate-sos-ring-fast' : 'animate-sos-ring'} animate-sos-ring-3`} />
+          <div className={`absolute w-[240px] h-[240px] rounded-full border-2 border-primary/30 opacity-0 ${isCountingDown ? 'animate-sos-ring-fast' : 'animate-sos-ring'}`} />
+          <div className={`absolute w-[240px] h-[240px] rounded-full border-2 border-primary/20 opacity-0 ${isCountingDown ? 'animate-sos-ring-fast' : 'animate-sos-ring'} animate-sos-ring-2`} />
+          <div className={`absolute w-[240px] h-[240px] rounded-full border-2 border-primary/10 opacity-0 ${isCountingDown ? 'animate-sos-ring-fast' : 'animate-sos-ring'} animate-sos-ring-3`} />
           <button
             onClick={isCountingDown ? cancelCountdown : startCountdown}
             className={`relative z-10 w-[200px] h-[200px] rounded-full bg-gradient-to-br from-[#E63946] via-[#E63946] to-[#c1121f] text-white flex flex-col items-center justify-center gap-3 shadow-[0_0_40px_rgba(230,57,70,0.5)] cursor-pointer transition-all duration-300 ${isCountingDown ? 'scale-110 shadow-[0_0_80px_rgba(230,57,70,0.7)]' : 'hover:scale-[1.04] hover:shadow-[0_0_60px_rgba(230,57,70,0.6)] active:scale-[0.96]'}`}>
@@ -105,7 +105,7 @@ export default function SmartSOS() {
 
         {/* Cancel / Actions */}
         {isCountingDown ? (
-          <p className="text-[#E63946] font-heading font-bold text-sm tracking-wide animate-pulse-status cursor-pointer" onClick={cancelCountdown}>TAP TO CANCEL</p>
+          <p className="text-primary font-heading font-bold text-sm tracking-wide animate-pulse-status cursor-pointer" onClick={cancelCountdown}>TAP TO CANCEL</p>
         ) : (
           <div className="flex gap-4 flex-wrap justify-center">
             <Button variant="outline" size="lg" onClick={() => { window.location.href = 'tel:100'; toast.success('Calling emergency contacts...') }}><Phone className="w-[18px] h-[18px]" /> Call Contacts</Button>
@@ -132,11 +132,11 @@ export default function SmartSOS() {
 
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="⚠️ Confirm SOS Alert"
         footer={<><Button variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button><Button variant="danger" onClick={triggerSOSAlert}>Send SOS Alert</Button></>}>
-        <div className="p-4 bg-[#E63946]/10 rounded-xl border border-[#E63946]/20 mb-4">
-          <p className="text-sm text-[#E63946] font-medium">This action cannot be undone easily.</p>
+        <div className="p-4 bg-primary/10 rounded-xl border border-primary/20 mb-4">
+          <p className="text-sm text-primary font-medium">This action cannot be undone easily.</p>
         </div>
-        <p className="text-[#A8B2C1] text-sm leading-relaxed">
-          This will immediately alert <strong className="text-[#F1FAEE]">all your emergency contacts</strong> with your current location. They will receive notifications via Email and in-app alerts.
+        <p className="text-muted text-sm leading-relaxed">
+          This will immediately alert <strong className="text-text">all your emergency contacts</strong> with your current location. They will receive notifications via Email and in-app alerts.
         </p>
       </Modal>
     </>

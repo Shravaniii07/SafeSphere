@@ -136,14 +136,14 @@ export default function EmergencySafety() {
 
           <div className={`relative rounded-2xl p-6 lg:p-8 text-white overflow-hidden mb-6 noise-overlay`}>
             <div className={`absolute inset-0 bg-gradient-to-br ${scenario.gradient}`} />
-            <div className="absolute -top-10 -right-10 w-[200px] h-[200px] bg-white/10 rounded-full blur-3xl animate-float" />
+            <div className="absolute -top-10 -right-10 w-[200px] h-[200px] bg-overlay-strong rounded-full blur-3xl animate-float" />
             <div className="relative z-10 flex items-center gap-4">
               <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
                 <scenario.icon className="w-7 h-7 text-white" />
               </div>
               <div>
                 <h2 className="text-xl font-display font-bold">{scenario.title}</h2>
-                <p className="text-white/60 text-sm">{scenario.desc}</p>
+                <p className="text-muted text-sm">{scenario.desc}</p>
               </div>
             </div>
           </div>

@@ -49,15 +49,15 @@ export default function Sidebar({ isOpen, onClose }) {
     : navItems;
 
   return (
-    <aside className={`w-[272px] fixed top-0 left-0 bottom-0 z-[100] flex flex-col transition-transform duration-300 overflow-y-auto ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 bg-[#0A0F1E]/95 backdrop-blur-xl border-r border-white/[0.06]`}>
+    <aside className={`w-[272px] fixed top-0 left-0 bottom-0 z-[100] flex flex-col transition-transform duration-300 overflow-y-auto ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 bg-sidebar backdrop-blur-xl border-r border-border`}>
       {/* Logo */}
       <div className="relative z-10 px-6 py-7 flex items-center gap-3.5">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#E63946] to-[#c1121f] flex items-center justify-center shadow-glow-red">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center shadow-glow-red">
           <Shield className="w-5 h-5 text-white" />
         </div>
-        <div className="font-heading text-xl font-bold tracking-tight text-[#F1FAEE] flex items-center gap-2">
-          Safe<span className="text-[#E63946]">Sphere</span>
-          <span className="w-2 h-2 rounded-full bg-[#E63946] animate-glow-dot" />
+        <div className="font-heading text-xl font-bold tracking-tight text-text flex items-center gap-2">
+          Safe<span className="text-primary">Sphere</span>
+          <span className="w-2 h-2 rounded-full bg-primary animate-glow-dot" />
         </div>
       </div>
 
@@ -66,19 +66,19 @@ export default function Sidebar({ isOpen, onClose }) {
         {filteredNavItems.map((item, i) => {
           if (item.adminOnly && role !== 'admin') return null
           if (item.section) return (
-            <div key={i} className="text-[10px] font-heading font-semibold uppercase tracking-[0.12em] text-white/30 px-4 pt-6 pb-2">{item.section}</div>
+            <div key={i} className="text-[10px] font-heading font-semibold uppercase tracking-[0.12em] text-muted/50 px-4 pt-6 pb-2">{item.section}</div>
           )
           const isActive = activePage === item.id
           return (
             <button key={item.id} onClick={() => handleNav(item.id)}
               aria-current={isActive ? 'page' : undefined}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 mb-0.5 cursor-pointer min-h-[40px] group focus-visible:outline-2 focus-visible:outline-[#E63946] focus-visible:outline-offset-2 ${isActive ? 'bg-[#E63946]/10 text-[#E63946] shadow-[inset_0_1px_0_rgba(230,57,70,0.1)]' : 'text-white/60 hover:bg-white/[0.05] hover:text-white/90'}`}>
-              <item.icon className={`w-[18px] h-[18px] transition-colors duration-200 ${isActive ? 'text-[#E63946]' : 'text-white/40 group-hover:text-white/70'}`} />
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 mb-0.5 cursor-pointer min-h-[40px] group focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 ${isActive ? 'bg-primary/10 text-primary shadow-[inset_0_1px_0_rgba(230,57,70,0.1)]' : 'text-muted hover:bg-overlay-strong hover:text-text'}`}>
+              <item.icon className={`w-[18px] h-[18px] transition-colors duration-200 ${isActive ? 'text-primary' : 'text-muted/60 group-hover:text-text'}`} />
               <span className="flex-1 text-left">{item.label}</span>
               {item.id === '/notifications' && user.unreadNotifications > 0 && (
-                <span className="w-5 h-5 text-[10px] font-bold bg-[#E63946] rounded-full flex items-center justify-center text-white">{user.unreadNotifications}</span>
+                <span className="w-5 h-5 text-[10px] font-bold bg-primary rounded-full flex items-center justify-center text-white">{user.unreadNotifications}</span>
               )}
-              {isActive && <ChevronRight className="w-3.5 h-3.5 text-[#E63946]/40" />}
+              {isActive && <ChevronRight className="w-3.5 h-3.5 text-primary/40" />}
             </button>
           )
         })}
@@ -86,8 +86,8 @@ export default function Sidebar({ isOpen, onClose }) {
 
       {/* System Status */}
       {role !== 'admin' && (
-        <div className="relative z-10 px-6 py-3 border-t border-white/[0.06]">
-          <div className="text-[10px] font-heading font-semibold uppercase tracking-[0.12em] text-white/30 mb-2">System Status</div>
+        <div className="relative z-10 px-6 py-3 border-t border-border">
+          <div className="text-[10px] font-heading font-semibold uppercase tracking-[0.12em] text-muted/50 mb-2">System Status</div>
           <div className="flex items-center gap-4">
             <StatusDot label="GPS" />
             <StatusDot label="Network" />
@@ -97,13 +97,13 @@ export default function Sidebar({ isOpen, onClose }) {
       )}
 
       {/* User */}
-      <div className="relative z-10 px-3 py-4 border-t border-white/[0.06]">
+      <div className="relative z-10 px-3 py-4 border-t border-border">
         <button onClick={() => handleNav('/profile')}
-          className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/[0.05] transition-all duration-200 cursor-pointer min-h-[44px] group">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#E63946] to-[#c1121f] flex items-center justify-center font-heading font-semibold text-sm text-white shadow-sm">{user.initials}</div>
+          className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-overlay transition-all duration-200 cursor-pointer min-h-[44px] group">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center font-heading font-semibold text-sm text-white shadow-sm">{user.initials}</div>
           <div className="text-left flex-1 min-w-0">
-            <div className="text-sm font-medium text-white/90 truncate">{user.name}</div>
-            <div className="text-[11px] text-white/40 truncate">{user.email}</div>
+            <div className="text-sm font-medium text-text truncate">{user.name}</div>
+            <div className="text-[11px] text-muted truncate">{user.email}</div>
           </div>
         </button>
       </div>
@@ -115,10 +115,10 @@ function StatusDot({ label }) {
   return (
     <div className="flex items-center gap-1.5">
       <span className="relative flex h-1.5 w-1.5">
-        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#06D6A0] opacity-75" />
-        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#06D6A0]" />
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />
+        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-success" />
       </span>
-      <span className="text-[10px] text-white/40">{label}</span>
+      <span className="text-[10px] text-muted">{label}</span>
     </div>
   )
 }

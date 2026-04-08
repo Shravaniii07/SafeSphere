@@ -97,13 +97,13 @@ export default function AdminPanel() {
       icon: Users,
       label: "Total Users",
       value: users.length,
-      color: "text-[#457B9D]",
+      color: "text-accent",
     },
     {
       icon: CheckCircle2,
       label: "Verified Users",
       value: users.filter((u) => u.isVerified).length,
-      color: "text-[#06D6A0]",
+      color: "text-success",
     },
   ];
 
@@ -161,8 +161,8 @@ export default function AdminPanel() {
 
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-heading font-bold text-[#F1FAEE]">Admin Panel</h1>
-        <p className="text-[#A8B2C1] text-sm">
+        <h1 className="text-2xl font-heading font-bold text-text">Admin Panel</h1>
+        <p className="text-muted text-sm">
           Manage users & send alerts
         </p>
       </div>
@@ -175,9 +175,9 @@ export default function AdminPanel() {
               <div className="flex justify-between items-center">
                 <div>
                   <p className={`text-2xl font-heading font-bold ${s.color}`}>{s.value}</p>
-                  <p className="text-xs text-[#A8B2C1]">{s.label}</p>
+                  <p className="text-xs text-muted">{s.label}</p>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-overlay flex items-center justify-center">
                   <s.icon className={`w-5 h-5 ${s.color}`} />
                 </div>
               </div>
@@ -190,8 +190,8 @@ export default function AdminPanel() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Megaphone className="w-4 h-4 text-[#FFB703]" />
-            <span className="font-heading font-semibold text-[#F1FAEE]">Broadcast Notification</span>
+            <Megaphone className="w-4 h-4 text-warning" />
+            <span className="font-heading font-semibold text-text">Broadcast Notification</span>
           </div>
         </CardHeader>
         <CardBody className="space-y-4">
@@ -199,7 +199,7 @@ export default function AdminPanel() {
             placeholder="Notification title..."
             value={notifTitle}
             onChange={(e) => setNotifTitle(e.target.value)}
-            className="w-full px-4 py-3 border border-white/10 rounded-xl bg-[#1F2937] text-[#F1FAEE] text-sm transition-all duration-200 hover:border-white/20 focus:border-[#E63946] focus:ring-2 focus:ring-[#E63946]/20 focus:outline-none placeholder-[#A8B2C1]/40"
+            className="w-full px-4 py-3 border border-border rounded-xl bg-surface2 text-text text-sm transition-all duration-200 hover:border-muted/30 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none placeholder-[#A8B2C1]/40"
           />
 
           <textarea
@@ -207,7 +207,7 @@ export default function AdminPanel() {
             value={notifMessage}
             onChange={(e) => setNotifMessage(e.target.value)}
             rows={3}
-            className="w-full px-4 py-3 border border-white/10 rounded-xl bg-[#1F2937] text-[#F1FAEE] text-sm resize-y transition-all duration-200 hover:border-white/20 focus:border-[#E63946] focus:ring-2 focus:ring-[#E63946]/20 focus:outline-none placeholder-[#A8B2C1]/40"
+            className="w-full px-4 py-3 border border-border rounded-xl bg-surface2 text-text text-sm resize-y transition-all duration-200 hover:border-muted/30 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none placeholder-[#A8B2C1]/40"
           />
 
           <Button onClick={handleSendNotification} disabled={sending} isLoading={sending}>
@@ -218,7 +218,7 @@ export default function AdminPanel() {
           {/* History */}
           {sentNotifs.length > 0 && (
             <div>
-              <button onClick={() => setShowHistory(!showHistory)} className="flex items-center gap-2 text-sm text-[#A8B2C1] hover:text-[#F1FAEE] transition-colors cursor-pointer">
+              <button onClick={() => setShowHistory(!showHistory)} className="flex items-center gap-2 text-sm text-muted hover:text-text transition-colors cursor-pointer">
                 <Clock className="w-4 h-4" />
                 History ({sentNotifs.length})
               </button>
@@ -226,10 +226,10 @@ export default function AdminPanel() {
               {showHistory && (
                 <div className="mt-3 space-y-2">
                   {sentNotifs.map((n) => (
-                    <div key={n._id} className="border border-white/[0.06] p-3 rounded-xl bg-white/[0.02]">
-                      <p className="font-heading font-semibold text-[#F1FAEE] text-sm">{n.title}</p>
-                      <p className="text-xs text-[#A8B2C1] mt-1">{n.message}</p>
-                      <p className="text-xs text-[#A8B2C1]/60 font-mono mt-1">{formatTimeAgo(n.createdAt)}</p>
+                    <div key={n._id} className="border border-border p-3 rounded-xl bg-overlay">
+                      <p className="font-heading font-semibold text-text text-sm">{n.title}</p>
+                      <p className="text-xs text-muted mt-1">{n.message}</p>
+                      <p className="text-xs text-muted/60 font-mono mt-1">{formatTimeAgo(n.createdAt)}</p>
                     </div>
                   ))}
                 </div>
@@ -242,14 +242,14 @@ export default function AdminPanel() {
       {/* Users */}
       <Card>
         <CardHeader>
-          <span className="font-heading font-semibold text-[#F1FAEE]">Users</span>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl">
-            <Search className="w-3.5 h-3.5 text-[#A8B2C1]/60" />
+          <span className="font-heading font-semibold text-text">Users</span>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-overlay border border-border rounded-xl">
+            <Search className="w-3.5 h-3.5 text-muted/60" />
             <input
               placeholder="Search users..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="bg-transparent border-none text-sm text-[#F1FAEE] placeholder-[#A8B2C1]/40 outline-none w-32"
+              className="bg-transparent border-none text-sm text-text placeholder-[#A8B2C1]/40 outline-none w-32"
             />
           </div>
         </CardHeader>
@@ -266,15 +266,15 @@ export default function AdminPanel() {
               {filtered.map((u) => (
                 <div
                   key={u._id}
-                  className="flex justify-between items-center p-4 rounded-xl hover:bg-white/[0.03] transition-colors"
+                  className="flex justify-between items-center p-4 rounded-xl hover:bg-overlay transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#E63946] to-[#c1121f] flex items-center justify-center text-white text-sm font-heading font-semibold">
                       {u.initials}
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-[#F1FAEE]">{u.name}</p>
-                      <p className="text-xs text-[#A8B2C1]">{u.email}</p>
+                      <p className="text-sm font-medium text-text">{u.name}</p>
+                      <p className="text-xs text-muted">{u.email}</p>
                     </div>
                   </div>
 
