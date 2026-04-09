@@ -53,7 +53,6 @@ export default function FakeCall() {
   const countdownRef = useRef(null)
   const callTimerRef = useRef(null)
   const ringIntervalRef = useRef(null)
-  const oscStopTimersRef = useRef([]) // track pending osc stop-timers
 
   const displayName = customName || callerName
 
@@ -73,19 +72,13 @@ export default function FakeCall() {
       audioRef.current = audioCtx
 
       const playRing = () => {
-        // Guard: don't play if context is already closed
-        if (audioCtx.state === 'closed') return
         const { osc1, osc2, gainNode } = createRingtone(audioCtx)
         osc1.start()
         osc2.start()
-        // Track the stop-timer so we can cancel it on stopRingtone
-        const timerId = setTimeout(() => {
-          try { osc1.stop() } catch { /* already stopped */ }
-          try { osc2.stop() } catch { /* already stopped */ }
-          // Remove from tracking array
-          oscStopTimersRef.current = oscStopTimersRef.current.filter(id => id !== timerId)
+        setTimeout(() => {
+          osc1.stop()
+          osc2.stop()
         }, 1000)
-        oscStopTimersRef.current.push(timerId)
       }
 
       playRing()
@@ -96,13 +89,7 @@ export default function FakeCall() {
   }, [])
 
   const stopRingtone = useCallback(() => {
-    // 1. Stop the ring interval so no new oscillators are created
     clearInterval(ringIntervalRef.current)
-    ringIntervalRef.current = null
-    // 2. Cancel all pending oscillator stop-timers
-    oscStopTimersRef.current.forEach(id => clearTimeout(id))
-    oscStopTimersRef.current = []
-    // 3. Close and discard the AudioContext
     if (audioRef.current && audioRef.current.state !== 'closed') {
       audioRef.current.close().catch(() => {})
       audioRef.current = null
@@ -152,8 +139,6 @@ export default function FakeCall() {
 
   const endCall = () => {
     clearInterval(callTimerRef.current)
-    callTimerRef.current = null
-    stopRingtone() // safety: ensure any residual audio is stopped
     setPhase('ended')
     toast.success('Call ended')
     setTimeout(() => {

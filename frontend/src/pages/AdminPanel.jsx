@@ -2,9 +2,23 @@ import { useState, useEffect } from 'react'
 import { TrendingUp, TrendingDown, Users, AlertTriangle, Route, Server, Download, Send, Bell, Megaphone, Trash2, Clock, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react'
 import { Card, CardHeader, CardBody, Button, Badge, Skeleton, EmptyState } from '../components/UI'
 import toast from 'react-hot-toast'
-import api from '../api/api'
 
 const ADMIN_NOTIF_KEY = 'safesphere_admin_notifications'
+
+const allUsers = [
+  { initials: 'AS', name: 'Aarav Singh', email: 'aarav@email.com', status: 'Active', sv: 'success', joined: 'Jan 15, 2026', gradient: 'from-primary to-primary-light' },
+  { initials: 'PK', name: 'Priya Kumar', email: 'priya@email.com', status: 'Active', sv: 'success', joined: 'Feb 02, 2026', gradient: 'from-secondary to-secondary-dark' },
+  { initials: 'RM', name: 'Ravi Mehta', email: 'ravi@email.com', status: 'Suspended', sv: 'warning', joined: 'Feb 20, 2026', gradient: 'from-amber-500 to-amber-600' },
+  { initials: 'NK', name: 'Neha Kapoor', email: 'neha@email.com', status: 'Active', sv: 'success', joined: 'Mar 10, 2026', gradient: 'from-accent to-accent-dark' },
+  { initials: 'VG', name: 'Vikas Gupta', email: 'vikas@email.com', status: 'Blocked', sv: 'danger', joined: 'Mar 18, 2026', gradient: 'from-info to-indigo-600' },
+]
+
+const stats = [
+  { value: '1,247', label: 'Total Users', change: '+12%', up: true, icon: Users },
+  { value: '89', label: 'Active SOS', change: '-3%', up: false, icon: AlertTriangle },
+  { value: '456', label: 'Trips Today', change: '+8%', up: true, icon: Route },
+  { value: '99.9%', label: 'Uptime', change: 'Stable', up: true, icon: Server },
+]
 
 const priorityConfig = {
   info: { label: 'Info', color: 'bg-info/10 text-info border-info/20', dot: 'bg-info', badge: 'info' },
@@ -12,9 +26,20 @@ const priorityConfig = {
   critical: { label: 'Critical', color: 'bg-accent/10 text-accent border-accent/20', dot: 'bg-accent', badge: 'danger' },
 }
 
+function loadAdminNotifications() {
+  try {
+    const stored = localStorage.getItem(ADMIN_NOTIF_KEY)
+    if (stored) return JSON.parse(stored)
+  } catch { /* ignore */ }
+  return []
+}
+
+function saveAdminNotifications(notifs) {
+  try { localStorage.setItem(ADMIN_NOTIF_KEY, JSON.stringify(notifs)) } catch { /* ignore */ }
+}
+
 function formatTimeAgo(timestamp) {
-  const date = typeof timestamp === 'string' ? new Date(timestamp).getTime() : timestamp
-  const diff = Date.now() - date
+  const diff = Date.now() - timestamp
   const mins = Math.floor(diff / 60000)
   if (mins < 1) return 'Just now'
   if (mins < 60) return `${mins}m ago`
@@ -27,7 +52,6 @@ function formatTimeAgo(timestamp) {
 }
 
 export default function AdminPanel() {
-  const [users, setUsers] = useState([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
 
@@ -37,86 +61,22 @@ export default function AdminPanel() {
   const [notifPriority, setNotifPriority] = useState('info')
   const [notifAudience, setNotifAudience] = useState('all')
   const [sending, setSending] = useState(false)
-  const [sentNotifs, setSentNotifs] = useState([])
+  const [sentNotifs, setSentNotifs] = useState(loadAdminNotifications)
   const [showHistory, setShowHistory] = useState(false)
 
-  const fetchUsers = async () => {
-    try {
-      const res = await api.get('/api/admin/users')
-      // Transform backend users to include UI-specific fields if needed
-      const transformedUsers = res.data.map(u => ({
-        ...u,
-        initials: u.name?.split(' ').map(n => n[0]).join('').toUpperCase() || '??',
-        status: u.isVerified ? 'Active' : 'Unverified',
-        sv: u.isVerified ? 'success' : 'warning',
-        joined: new Date(u.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
-        gradient: u.role === 'admin' ? 'from-primary to-primary-light' : 'from-secondary to-secondary-dark'
-      }))
-      setUsers(transformedUsers)
-    } catch (err) {
-      console.error("Users fetch error:", err)
-      toast.error("Failed to load users")
-    } finally {
-      setLoading(false)
-    }
-  }
+  useEffect(() => { const t = setTimeout(() => setLoading(false), 1500); return () => clearTimeout(t) }, [])
 
-  useEffect(() => {
-    fetchUsers()
-  }, [])
-
-  // ── Stats derived from real backend data ──────────────────────────────────
-  const stats = [
-    {
-      icon: Users,
-      label: 'Total Users',
-      value: users.length.toString(),
-      change: `${users.filter(u => u.role === 'admin').length} admins`,
-      up: true,
-    },
-    {
-      icon: CheckCircle2,
-      label: 'Verified Users',
-      value: users.filter(u => u.isVerified).length.toString(),
-      change: `${users.filter(u => !u.isVerified).length} pending`,
-      up: true,
-    },
-    {
-      icon: Route,
-      label: 'Active Sessions',
-      value: users.filter(u => u.status === 'Active').length.toString(),
-      change: 'Live count',
-      up: true,
-    },
-    {
-      icon: Server,
-      label: 'System Status',
-      value: 'Online',
-      change: 'All services up',
-      up: true,
-    },
-  ]
-
-  const filtered = users.filter(u =>
-    u.name?.toLowerCase().includes(search.toLowerCase()) ||
-    u.email?.toLowerCase().includes(search.toLowerCase())
+  const filtered = allUsers.filter(u =>
+    u.name.toLowerCase().includes(search.toLowerCase()) ||
+    u.email.toLowerCase().includes(search.toLowerCase())
   )
 
-  const handleAction = async (user, action) => {
-    if (action === 'Remove') {
-      try {
-        await api.delete(`/api/admin/user/${user._id}`)
-        toast.success(`${user.name} has been removed`)
-        fetchUsers()
-      } catch (err) {
-        toast.error(err.response?.data?.message || "Failed to remove user")
-      }
-    } else {
-      toast.success(`${user.name} has been blocked (mock)`)
-    }
+  const handleAction = (user, action) => {
+    if (action === 'Block') toast.success(`${user.name} has been blocked`)
+    else toast.error(`${user.name} has been removed`)
   }
 
-  const handleSendNotification = async () => {
+  const handleSendNotification = () => {
     if (!notifTitle.trim()) {
       toast.error('Please enter a notification title')
       return
@@ -128,23 +88,49 @@ export default function AdminPanel() {
 
     setSending(true)
 
-    try {
-      await api.post('/api/admin/alert', {
+    // Simulate network delay for realistic feel
+    setTimeout(() => {
+      const newNotif = {
+        id: Date.now(),
+        type: notifPriority === 'critical' ? 'sos' : notifPriority === 'warning' ? 'system' : 'info',
+        adminType: notifPriority,
         title: notifTitle.trim(),
-        message: notifMessage.trim(),
-        type: notifPriority === 'critical' ? 'danger' : notifPriority === 'warning' ? 'warning' : 'info'
-      })
+        desc: notifMessage.trim(),
+        time: Date.now(),
+        read: false,
+        audience: notifAudience,
+        sentBy: 'Admin',
+        isAdmin: true,
+      }
 
-      toast.success('System alert broadcasted! 📢')
+      const updated = [newNotif, ...sentNotifs]
+      setSentNotifs(updated)
+      saveAdminNotifications(updated)
+
+      // Also push to user notifications store so users see it
+      try {
+        const userNotifKey = 'safesphere_notifications'
+        const userNotifs = JSON.parse(localStorage.getItem(userNotifKey) || '[]')
+        userNotifs.unshift(newNotif)
+        localStorage.setItem(userNotifKey, JSON.stringify(userNotifs))
+      } catch { /* ignore */ }
+
       setNotifTitle('')
       setNotifMessage('')
-    } catch (err) {
-      toast.error(err.response?.data?.message || err.message)
-    } finally {
+      setNotifPriority('info')
+      setNotifAudience('all')
       setSending(false)
-    }
-  }
 
+      const audienceText = notifAudience === 'all' ? 'all users' : `${notifAudience} users`
+      toast.success(
+        <span className="flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+          Notification sent to {audienceText}!
+        </span>,
+        { duration: 3000 }
+      )
+    }, 1200)
+  }
 
   const deleteNotif = (id) => {
     const updated = sentNotifs.filter(n => n.id !== id)
@@ -170,7 +156,7 @@ export default function AdminPanel() {
         </div>
         <Button variant="outline" size="sm" onClick={() => {
           const csvHeader = 'Name,Email,Status,Joined\n'
-          const csvRows = users.map(u => `${u.name},${u.email},${u.status},${u.joined}`).join('\n')
+          const csvRows = allUsers.map(u => `${u.name},${u.email},${u.status},${u.joined}`).join('\n')
           const blob = new Blob([csvHeader + csvRows], { type: 'text/csv' })
           const url = URL.createObjectURL(blob)
           const a = document.createElement('a'); a.href = url; a.download = 'safesphere_users.csv'; a.click()

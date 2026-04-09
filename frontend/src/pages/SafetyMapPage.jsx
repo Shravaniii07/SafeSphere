@@ -1,15 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
-import { createPortal } from 'react-dom'
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, LayersControl, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 import {
-  MapPin, AlertTriangle, Layers,
-  X, Send
+  MapPin, ShieldCheck, Building2, Cross, AlertTriangle, Layers,
+  Navigation, Plus, X, Send
 } from 'lucide-react'
 import { Card, CardBody, Button, Badge } from '../components/UI'
 import 'leaflet/dist/leaflet.css'
 import toast from 'react-hot-toast'
-import api from '../api/api'
 
 // Fix leaflet default marker icon
 delete L.Icon.Default.prototype._getIconUrl
@@ -26,7 +24,7 @@ const createIcon = (color) => L.divIcon({
   iconAnchor: [14, 14],
 })
 
-// Mock data for nearby places
+// Mock data for nearby places — TODO: Replace with Google Places / Overpass API
 const mockPoliceStations = [
   { id: 1, lat: 18.5260, lng: 73.8550, name: 'Shivajinagar Police Station', address: 'FC Road, Pune' },
   { id: 2, lat: 18.5080, lng: 73.8305, name: 'Swargate Police Station', address: 'Swargate, Pune' },
@@ -53,32 +51,9 @@ export default function SafetyMapPage() {
   const [showPinModal, setShowPinModal] = useState(false)
   const [clickedPos, setClickedPos] = useState(null)
   const [pinNote, setPinNote] = useState('')
-  const [incidentType, setIncidentType] = useState('Other')
   const [userPins, setUserPins] = useState([])
   const [layers, setLayers] = useState({ police: true, hospitals: true, safeZones: true, userPins: true })
-
   const [center] = useState([18.5204, 73.8567]) // Pune default
-
-  // Fetch incidents from backend
-  useEffect(() => {
-    const fetchIncidents = async () => {
-      try {
-        const res = await api.get('/api/incidents')
-        if (res.data.success) {
-          setUserPins(res.data.data.map(inc => ({
-            id: inc._id,
-            lat: inc.location.lat,
-            lng: inc.location.lng,
-            note: inc.description,
-            type: inc.type
-          })))
-        }
-      } catch (err) {
-        console.error("Incidents fetch error:", err)
-      }
-    }
-    fetchIncidents()
-  }, [])
 
   const handleMapClick = (latlng) => {
     setClickedPos(latlng)
@@ -86,34 +61,11 @@ export default function SafetyMapPage() {
     setPinNote('')
   }
 
-  const submitPin = async () => {
+  const submitPin = () => {
     if (!clickedPos) return
-
-    try {
-      const res = await api.post('/api/incidents/report', {
-        lat: clickedPos.lat,
-        lng: clickedPos.lng,
-        type: incidentType,
-        description: pinNote || `Reported ${incidentType}`
-      })
-
-      if (res.data.success) {
-        const newInc = res.data.data
-        setUserPins(prev => [...prev, {
-          id: newInc._id,
-          lat: newInc.location.lat,
-          lng: newInc.location.lng,
-          note: newInc.description,
-          type: newInc.type
-        }])
-        setShowPinModal(false)
-        setPinNote('')
-        setIncidentType('Other')
-        toast.success('Incident reported successfully! 🛡️')
-      }
-    } catch (err) {
-      toast.error(err.response?.data?.message || err.message)
-    }
+    setUserPins(prev => [...prev, { ...clickedPos, note: pinNote || 'Unsafe area', id: Date.now() }])
+    setShowPinModal(false)
+    toast.success('Unsafe location marked!')
   }
 
   const toggleLayer = (layer) => {
@@ -131,7 +83,7 @@ export default function SafetyMapPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Map Area */}
+        {/* Map */}
         <div className="lg:col-span-9">
           <Card hover={false}>
             <div className="relative rounded-2xl overflow-hidden" style={{ height: '520px' }}>
@@ -181,25 +133,24 @@ export default function SafetyMapPage() {
                   </Marker>
                 ))}
 
-                {/* User Pins (Incidents) */}
+                {/* User Pins */}
                 {layers.userPins && userPins.map(p => (
                   <Marker key={`pin-${p.id}`} position={[p.lat, p.lng]} icon={createIcon('#F43F5E')}>
                     <Popup>
                       <div className="font-sans">
-                        <strong className="font-display text-sm text-accent">⚠ {p.type}</strong>
+                        <strong className="font-display text-sm text-accent">⚠ Unsafe Area</strong>
                         <p className="text-xs text-gray-500 mt-0.5">{p.note}</p>
-                        <span className="inline-block text-[10px] bg-accent-50 text-accent px-2 py-0.5 rounded-full mt-1 font-medium">Incident Report</span>
+                        <span className="inline-block text-[10px] bg-accent-50 text-accent px-2 py-0.5 rounded-full mt-1 font-medium">User Report</span>
                       </div>
                     </Popup>
                   </Marker>
                 ))}
-
               </MapContainer>
             </div>
           </Card>
         </div>
 
-        {/* Sidebar Controls */}
+        {/* Controls */}
         <div className="lg:col-span-3 space-y-4">
           <Card>
             <CardBody>
@@ -221,26 +172,9 @@ export default function SafetyMapPage() {
                 <AlertTriangle className="w-4 h-4 text-accent" /> Report Unsafe Area
               </h4>
               <p className="text-xs text-slate-500 mb-3">Click anywhere on the map to drop a pin and mark an unsafe location.</p>
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-2 p-2.5 bg-accent-50 rounded-lg">
-                  <MapPin className="w-4 h-4 text-accent shrink-0" />
-                  <span className="text-xs text-accent font-medium">{userPins.length} reports submitted</span>
-                </div>
-                <Button
-                  variant="danger"
-                  className="w-full text-xs py-2.5"
-                  onClick={() => {
-                    if (navigator.geolocation) {
-                      navigator.geolocation.getCurrentPosition((pos) => {
-                        handleMapClick({ lat: pos.coords.latitude, lng: pos.coords.longitude })
-                      })
-                    } else {
-                      toast.error("Geolocation not supported. Please click on map.")
-                    }
-                  }}
-                >
-                  <AlertTriangle className="w-3.5 h-3.5 mr-1" /> Report at My Location
-                </Button>
+              <div className="flex items-center gap-2 p-2.5 bg-accent-50 rounded-lg">
+                <MapPin className="w-4 h-4 text-accent shrink-0" />
+                <span className="text-xs text-accent font-medium">{userPins.length} reports submitted</span>
               </div>
             </CardBody>
           </Card>
@@ -259,18 +193,11 @@ export default function SafetyMapPage() {
         </div>
       </div>
 
-      {/* Pin Modal - Portaled to body to ensure it appears above all stacking contexts (including Leaflet) */}
-      {showPinModal && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-primary-dark/60 backdrop-blur-md" style={{ animation: 'modal-overlay-in 0.2s ease' }}>
-          {/* Backdrop Overlay (closes modal on click) */}
-          <div className="absolute inset-0" onClick={() => setShowPinModal(false)} />
-          
-          {/* Modal Content */}
-          <div
-            className="relative bg-white rounded-2xl shadow-elevated-lg w-full max-w-[400px] p-6 lg:p-8"
-            style={{ animation: 'modal-content-in 0.3s cubic-bezier(0.16,1,0.3,1)' }}
-            onClick={(e) => e.stopPropagation()} // ✅ Prevent click from bubbling to backdrop
-          >
+      {/* Pin Modal */}
+      {showPinModal && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4" style={{ animation: 'modal-overlay-in 0.2s ease' }}>
+          <div className="absolute inset-0 bg-primary-dark/60 backdrop-blur-md" onClick={() => setShowPinModal(false)} />
+          <div className="relative bg-white rounded-2xl shadow-elevated-lg w-full max-w-[400px] p-6" style={{ animation: 'modal-content-in 0.3s cubic-bezier(0.16,1,0.3,1)' }}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-display font-bold text-primary flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-accent" /> Mark Unsafe Area
@@ -279,46 +206,22 @@ export default function SafetyMapPage() {
                 <X className="w-4 h-4" />
               </button>
             </div>
-            
-            <p className="text-xs text-slate-400 mb-4 font-medium uppercase tracking-wider">
+            <p className="text-xs text-slate-400 mb-4">
               Location: {clickedPos?.lat.toFixed(4)}, {clickedPos?.lng.toFixed(4)}
             </p>
-
-            <div className="mb-4">
-              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 block">Report Type</label>
-              <div className="grid grid-cols-2 gap-2">
-                {['Crime', 'Emergency', 'Harassment', 'Theft', 'Accident', 'Other'].map(type => (
-                  <button
-                    key={type}
-                    onClick={() => setIncidentType(type)}
-                    className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all ${incidentType === type
-                        ? 'bg-accent border-accent text-white shadow-sm'
-                        : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
-                      }`}
-                  >
-                    {type}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             <textarea
-              placeholder="Describe the incident..."
+              placeholder="Describe why this area is unsafe..."
               value={pinNote}
               onChange={e => setPinNote(e.target.value)}
               rows={3}
               className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-800 text-sm resize-none transition-all duration-200 focus:border-secondary focus:ring-2 focus:ring-secondary/10 focus:outline-none placeholder-slate-400 mb-4"
             />
-            
             <div className="flex gap-3 justify-end">
               <Button variant="outline" onClick={() => setShowPinModal(false)}>Cancel</Button>
-              <Button variant="danger" onClick={submitPin}>
-                <Send className="w-3.5 h-3.5" /> Submit Report
-              </Button>
+              <Button variant="danger" onClick={submitPin}><Send className="w-3.5 h-3.5" /> Submit Report</Button>
             </div>
           </div>
-        </div>,
-        document.body
+        </div>
       )}
     </div>
   )

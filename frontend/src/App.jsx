@@ -10,7 +10,6 @@ import LandingPage from './pages/LandingPage'
 import UserLogin from './pages/UserLogin'
 import AdminLogin from './pages/AdminLogin'
 import RegisterPage from './pages/RegisterPage'
-import VerifyOTP from './pages/VerifyOTP'
 import NotFound from './pages/NotFound'
 
 // Protected pages
@@ -42,21 +41,12 @@ export default function App() {
         <AppProvider>
           <Routes>
             {/* Public Routes */}
+            <Route path="/" element={<LandingPage />} />
             <Route element={<PublicRoute />}>
-              <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<UserLogin />} />
               <Route path="/register" element={<RegisterPage />} />
-              <Route path="/verify-otp" element={<VerifyOTP />} />
               <Route path="/admin/login" element={<AdminLogin />} />
             </Route>
-
-            {/* Public Tracking Route — no auth required, shared via email */}
-            <Route path="/track/:trackingId" element={<Tracking />} />
-            <Route path="/tracking/:trackingId" element={<Tracking />} />
-            <Route path="/track" element={<Tracking />} />
-            <Route path="/tracking" element={<Tracking />} />
-
-
 
             {/* Protected Routes — any authenticated user */}
             <Route element={<ProtectedRoute />}>
@@ -66,7 +56,7 @@ export default function App() {
                 <Route path="/location" element={<LiveLocation />} />
                 <Route path="/nearby" element={<NearbyServices />} />
                 <Route path="/emergency" element={<EmergencyInfo />} />
-                {/* Tracking moved to public — removed from here */}
+                <Route path="/tracking" element={<Tracking />} />
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/travel" element={<TravelSafety />} />
                 <Route path="/heatmap" element={<SafetyHeatmap />} />
