@@ -1,7 +1,39 @@
-import { useState } from 'react'
-import { Map, Filter, Clock, AlertTriangle, TrendingUp, Eye, MapPin, Users, BarChart3 } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet'
+import L from 'leaflet'
+import { Map, Filter, Clock, AlertTriangle, TrendingUp, Eye, MapPin, Users, BarChart3, Trash2 } from 'lucide-react'
 import { Card, CardHeader, CardBody, Badge, FilterButton } from '../components/UI'
+import 'leaflet/dist/leaflet.css'
+import api from '../api/api'
+import { useApp } from '../context/AppContext'
+import toast from 'react-hot-toast'
 
+// Fix leaflet icons
+delete L.Icon.Default.prototype._getIconUrl
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+})
+
+const createIcon = (color) => L.divIcon({
+  className: 'custom-marker',
+  html: `<div style="background:${color};width:26px;height:26px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);"></div>`,
+  iconSize: [26, 26],
+  iconAnchor: [13, 13],
+})
+
+// Distance utility (Haversine formula)
+const getDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 6371; // km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
 const mockIncidents = [
   { id: 1, type: 'Harassment', location: 'FC Road, Pune', time: '2 hours ago', severity: 'High', lat: 18.526, lng: 73.841 },
   { id: 2, type: 'Stalking', location: 'Koregaon Park', time: '5 hours ago', severity: 'Medium', lat: 18.536, lng: 73.893 },
@@ -17,18 +49,110 @@ const timeFilters = ['24 Hours', '7 Days', '30 Days', 'All Time']
 const typeFilters = ['All', 'Harassment', 'Stalking', 'Unsafe Area', 'Eve Teasing', 'Theft']
 
 const severityConfig = {
-  High: { bg: 'bg-gradient-to-br from-red-500 to-rose-600', badge: 'danger' },
-  Medium: { bg: 'bg-gradient-to-br from-amber-500 to-orange-500', badge: 'warning' },
-  Low: { bg: 'bg-gradient-to-br from-emerald-500 to-teal-500', badge: 'success' },
+  High: { bg: 'bg-gradient-to-br from-red-500 to-rose-600', badge: 'danger', color: '#F43F5E' },
+  Medium: { bg: 'bg-gradient-to-br from-amber-500 to-orange-500', badge: 'warning', color: '#F59E0B' },
+  Low: { bg: 'bg-gradient-to-br from-emerald-500 to-teal-500', badge: 'success', color: '#10B981' },
 }
-
 export default function SafetyHeatmapView() {
+  const { user } = useApp()
   const [timeFilter, setTimeFilter] = useState('7 Days')
   const [typeFilter, setTypeFilter] = useState('All')
+  const [reports, setReports] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState({ totalReports: 0, riskLevel: 'safe' })
+  const [mapCenter, setMapCenter] = useState([18.5204, 73.8567])
 
-  const filteredIncidents = mockIncidents.filter(inc => typeFilter === 'All' || inc.type === typeFilter)
+  useEffect(() => {
+    const fetchHeatmap = async (lat, lng) => {
+      try {
+        setLoading(true)
+        // 1. Fetch from reports heatmap
+        const reportsRes = await api.get('/api/reports/heatmap', { params: { lat, lng } }).catch(() => ({ data: {} }))
+        
+        // 2. Fetch from new incidents API
+        const incidentsRes = await api.get('/api/incidents').catch(() => ({ data: {} }))
+
+        const reportsData = reportsRes.data.reports || []
+        const incidentsData = (incidentsRes.data.data || []).map(inc => ({
+          _id: inc._id,
+          category: inc.type,
+          location: { type: 'Point', coordinates: [inc.location.lng, inc.location.lat] },
+          description: inc.description,
+          severity: inc.severity || 1, 
+          userId: inc.user?._id || inc.user,
+          createdAt: inc.timestamp || inc.createdAt
+        }))
+
+        const merged = [...reportsData, ...incidentsData]
+        setReports(merged)
+        setMapCenter([lat, lng])
+        setStats({ 
+          totalReports: merged.length, 
+          riskLevel: reportsRes.data.riskLevel || 'safe' 
+         })
+      } catch (err) {
+        console.error('Heatmap fetch error:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => fetchHeatmap(pos.coords.latitude, pos.coords.longitude),
+        () => fetchHeatmap(18.5204, 73.8567),
+        { enableHighAccuracy: true }
+      )
+    } else {
+      fetchHeatmap(18.5204, 73.8567)
+    }
+
+    const interval = setInterval(() => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => fetchHeatmap(pos.coords.latitude, pos.coords.longitude),
+          () => fetchHeatmap(18.5204, 73.8567)
+        )
+      } else {
+        fetchHeatmap(18.5204, 73.8567)
+      }
+    }, 10000)
+
+    return () => clearInterval(interval)
+  }, [])
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this report?')) return;
+    try {
+      const res = await api.delete(`/api/incidents/${id}`)
+      if (res.data.success) {
+        toast.success('Report deleted successfully')
+        setReports(prev => prev.filter(p => p._id !== id))
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete report')
+    }
+  }
+
+  const filteredIncidents = reports.map(r => ({
+    id: r._id,
+    type: r.category,
+    location: r.location.coordinates ? `${r.location.coordinates[1].toFixed(4)}, ${r.location.coordinates[0].toFixed(4)}` : 'Unknown',
+    time: new Date(r.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
+    severity: r.severity >= 4 || r.severity === 'High' ? 'High' : (r.severity === 3 || r.severity === 'Medium' ? 'Medium' : 'Low'),
+    userId: r.userId,
+    lat: r.location.coordinates ? r.location.coordinates[1] : 0,
+    lng: r.location.coordinates ? r.location.coordinates[0] : 0
+  })).filter(inc => {
+    const matchesType = typeFilter === 'All' || inc.type === typeFilter;
+    const dist = mapCenter ? getDistance(mapCenter[0], mapCenter[1], inc.lat, inc.lng) : 0;
+    return matchesType && dist <= 10;
+  })
+
   const highRisk = filteredIncidents.filter(i => i.severity === 'High').length
-  const totalReports = filteredIncidents.length
+  const mediumRisk = filteredIncidents.filter(i => i.severity === 'Medium').length
+  const lowRisk = filteredIncidents.filter(i => i.severity === 'Low').length
+  const totalReportsCount = filteredIncidents.length
 
   return (
     <div className="stagger-children">
@@ -42,31 +166,79 @@ export default function SafetyHeatmapView() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatMini icon={BarChart3} label="Total Reports" value={String(totalReports)} color="text-primary" bgColor="bg-slate-50" />
+        <StatMini icon={BarChart3} label="Total Reports" value={String(totalReportsCount)} color="text-primary" bgColor="bg-slate-50" />
         <StatMini icon={AlertTriangle} label="High Risk" value={String(highRisk)} color="text-red-500" bgColor="bg-red-50" />
-        <StatMini icon={MapPin} label="Active Zones" value="12" color="text-amber-500" bgColor="bg-amber-50" />
-        <StatMini icon={TrendingUp} label="Resolved" value="34" color="text-emerald-600" bgColor="bg-emerald-50" />
+        <StatMini icon={AlertTriangle} label="Medium Risk" value={String(mediumRisk)} color="text-amber-500" bgColor="bg-amber-50" />
+        <StatMini icon={TrendingUp} label="Risk Level" value={stats.riskLevel.toUpperCase()} color="text-emerald-600" bgColor="bg-emerald-50" />
       </div>
 
       {/* Heatmap Visualization */}
-      <Card className="mb-6" hover={false}>
-        <div className="relative min-h-[350px] rounded-2xl overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-slate-50 to-white">
-            <div className="absolute inset-0 dot-pattern opacity-40" />
-            <div className="absolute top-[20%] left-[30%] w-32 h-32 bg-red-500/15 rounded-full blur-2xl animate-pulse" />
-            <div className="absolute top-[40%] right-[25%] w-40 h-40 bg-red-500/10 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '0.5s' }} />
-            <div className="absolute bottom-[25%] left-[50%] w-24 h-24 bg-amber-400/15 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }} />
-            <div className="absolute top-[60%] left-[20%] w-28 h-28 bg-amber-400/10 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1.5s' }} />
-            <div className="absolute top-[15%] right-[40%] w-20 h-20 bg-emerald-400/10 rounded-full blur-2xl" />
-            <div className="absolute bottom-[40%] right-[15%] w-24 h-24 bg-emerald-400/8 rounded-full blur-2xl" />
-          </div>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center">
-              <Map className="w-12 h-12 text-slate-300 mx-auto mb-2 animate-float" />
-              <p className="text-sm font-display font-medium text-slate-400">Heatmap Visualization</p>
-              <p className="text-xs text-slate-300 mt-1">Interactive heatmap with live data</p>
+      <Card className="mb-6 overflow-hidden" hover={false}>
+        <div className="relative h-[500px] md:h-[600px] w-full bg-slate-100">
+          {loading ? (
+            <div className="absolute inset-0 flex items-center justify-center bg-slate-50/50 backdrop-blur-sm z-10">
+              <div className="text-center">
+                <div className="w-10 h-10 border-4 border-secondary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                <p className="text-sm text-slate-400 font-medium">Loading live safety data...</p>
+              </div>
             </div>
-          </div>
+          ) : null}
+          <MapContainer 
+            center={mapCenter} 
+            zoom={13} 
+            style={{ height: '100%', width: '100%' }} 
+            className="z-0"
+            key={`${mapCenter[0]}-${mapCenter[1]}`}
+            whenReady={(mapInstance) => {
+              setTimeout(() => {
+                mapInstance.target.invalidateSize();
+              }, 100);
+            }}
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://carto.com">CARTO</a>'
+              url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+            />
+            <Circle 
+              center={mapCenter} 
+              radius={10000} 
+              pathOptions={{ 
+                fillColor: '#10B981', 
+                fillOpacity: 0.1, 
+                color: '#10B981', 
+                weight: 1 
+              }} 
+            />
+            {filteredIncidents.map(inc => (
+              <Marker
+                key={inc.id}
+                position={[inc.lat, inc.lng]}
+                icon={createIcon(severityConfig[inc.severity].color)}
+              >
+                <Popup>
+                  <div className="font-sans">
+                    <div className="flex items-center justify-between gap-3 mb-1">
+                      <strong className="text-sm">⚠ {inc.type}</strong>
+                      {inc.userId === user?._id && (
+                        <button 
+                          onClick={() => handleDelete(inc.id)}
+                          className="p-1 hover:bg-red-50 text-red-500 rounded transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">{inc.location}</p>
+                    <p className="text-xs text-gray-400 mt-1">{inc.time}</p>
+                    <span className={`inline-block text-[10px] px-2 py-0.5 rounded-full mt-1 font-medium ${
+                      inc.severity === 'High' ? 'bg-red-50 text-red-600' :
+                      inc.severity === 'Medium' ? 'bg-amber-50 text-amber-600' : 'bg-yellow-50 text-yellow-600'
+                    }`}>{inc.severity} Risk</span>
+                  </div>
+                </Popup>
+              </Marker>
+            ))}
+          </MapContainer>
         </div>
 
         <CardBody>
@@ -76,7 +248,7 @@ export default function SafetyHeatmapView() {
             <div className="flex-1 bg-gradient-to-r from-red-400 to-red-500" />
           </div>
           <div className="flex gap-8 flex-wrap">
-            <LegendItem color="bg-emerald-500" label="Low Risk" />
+            <LegendItem color="bg-yellow-400" label="Low Risk" />
             <LegendItem color="bg-amber-500" label="Medium Risk" />
             <LegendItem color="bg-red-500" label="High Risk" />
           </div>
@@ -129,7 +301,17 @@ export default function SafetyHeatmapView() {
                     </div>
                     <p className="text-xs text-slate-400 flex items-center gap-1"><MapPin className="w-3 h-3" /> {inc.location}</p>
                   </div>
-                  <span className="text-[11px] text-slate-400 font-mono whitespace-nowrap">{inc.time}</span>
+                  <div className="flex flex-col items-end gap-2">
+                    <span className="text-[11px] text-slate-400 font-mono whitespace-nowrap">{inc.time}</span>
+                    {inc.userId === user?._id && (
+                      <button 
+                        onClick={() => handleDelete(inc.id)}
+                        className="p-1.5 hover:bg-red-50 text-red-500 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-red-100"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               )
             })}

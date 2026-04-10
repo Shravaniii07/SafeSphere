@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
-import { Link, Signal, Navigation, Copy, Clock, Wifi } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Link, Signal, Navigation, Copy, Clock, Wifi, Shield } from 'lucide-react'
+import api from '../api/api'
 import { Card, CardHeader, CardBody, Button, Toggle, MapPlaceholder, Badge } from '../components/UI'
 import toast from 'react-hot-toast'
 
@@ -11,6 +12,26 @@ export default function LiveLocation() {
   const [error, setError] = useState(null)
   const [watchId, setWatchId] = useState(null)
   const [address, setAddress] = useState('Locating...')
+  const [activeTrackingId, setActiveTrackingId] = useState(null)
+  const [trackingLink, setTrackingLink] = useState('')
+  
+  const lastSentPosition = useRef(null)
+
+  // Calculate distance between two coordinates in meters
+  const getDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371e3; // metres
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) *
+      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c;
+  }
 
   // Start GPS tracking
   useEffect(() => {
@@ -25,6 +46,29 @@ export default function LiveLocation() {
         setAccuracy(Math.round(pos.coords.accuracy))
         setLastUpdate(new Date())
         setError(null)
+        // Sync with backend if sharing is enabled and position has changed significantly (> 10m)
+        if (sharing) {
+          const latitude = pos.coords.latitude;
+          const longitude = pos.coords.longitude;
+          const distance = lastSentPosition.current 
+            ? getDistance(latitude, longitude, lastSentPosition.current.lat, lastSentPosition.current.lng)
+            : Infinity;
+
+          if (distance > 10) { // Only send if moved more than 10 meters
+            // 1. Update general user location
+            api.post('/api/location/update', { latitude, longitude })
+              .then(() => {
+                lastSentPosition.current = { lat: latitude, lng: longitude };
+              })
+              .catch(err => console.error("Location sync error:", err))
+
+            // 2. Update active public tracking session (if exists)
+            if (activeTrackingId) {
+              api.post(`/api/tracking/update/${activeTrackingId}`, { lat: latitude, lng: longitude })
+                .catch(err => console.error("Public tracking sync error:", err))
+            }
+          }
+        }
       },
       (err) => setError(err.message),
       { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
@@ -156,18 +200,56 @@ export default function LiveLocation() {
                 <Toggle label="Live Sharing" description="Real-time broadcast to contacts" checked={sharing} onChange={() => setSharing(!sharing)} />
               </div>
               <div className="h-px bg-slate-100 mb-6" />
-              <Button variant="teal" full onClick={() => {
-                const trackingId = Math.random().toString(36).slice(2, 8)
-                const url = position
-                  ? `https://safesphere.app/track/${trackingId}?lat=${position.lat}&lng=${position.lng}`
-                  : `https://safesphere.app/track/${trackingId}`
-                navigator.clipboard.writeText(url)
-                  .then(() => toast.success('Tracking link copied to clipboard!'))
-                  .catch(() => toast.success(`Link: ${url}`))
-              }}>
-                <Link className="w-[18px] h-[18px]" /> Generate Tracking Link
+              <Button 
+                variant="teal" 
+                full 
+                onClick={async () => {
+                  if (!position) {
+                    toast.error('Location not available yet')
+                    return
+                  }
+                  try {
+                    const res = await api.post('/api/tracking/create')
+                    if (res.data.success) {
+                      const tid = res.data.trackingId
+                      setActiveTrackingId(tid)
+                      
+                      const link = `${window.location.origin}/track/${tid}`
+                      setTrackingLink(link)
+                      
+                      navigator.clipboard.writeText(link)
+                        .then(() => toast.success('Real-time tracking link generated and copied!'))
+                      
+                      api.post(`/api/tracking/update/${tid}`, { lat: position.lat, lng: position.lng })
+                    }
+                  } catch (err) {
+                    toast.error('Failed to generate tracking link')
+                  }
+                }}
+              >
+                <Link className="w-[18px] h-[18px]" /> {activeTrackingId ? 'Regenerate Tracking Link' : 'Generate Tracking Link'}
               </Button>
-              <p className="text-[11px] text-slate-400 mt-3 text-center">Link expires after 24 hours</p>
+
+              {trackingLink && (
+                <div className="mt-4 space-y-3">
+                  <div className="p-3 bg-white rounded-xl border border-dashed border-secondary/30 shadow-sm">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <p className="text-[10px] text-secondary-dark uppercase font-extrabold tracking-wider flex items-center gap-1">
+                        <Shield className="w-2.5 h-2.5" /> SafeSphere Live Link
+                      </p>
+                      <button onClick={() => {
+                        navigator.clipboard.writeText(trackingLink)
+                          .then(() => toast.success('SafeSphere link copied!'))
+                      }} className="p-1 px-2 rounded-md bg-secondary-50 hover:bg-secondary-100 text-[10px] font-bold text-secondary-dark transition-colors flex items-center gap-1 cursor-pointer">
+                        <Copy className="w-2.5 h-2.5" /> Copy
+                      </button>
+                    </div>
+                    <p className="text-xs font-mono text-primary break-all leading-relaxed p-2 bg-slate-50/50 rounded-lg border border-slate-100">{trackingLink}</p>
+                  </div>
+                </div>
+              )}
+              
+              <p className="text-[11px] text-slate-400 mt-3 text-center">Generated link allows anyone to track your live movement</p>
 
               <div className="h-px bg-slate-100 my-5" />
 
@@ -177,7 +259,6 @@ export default function LiveLocation() {
             </CardBody>
           </Card>
 
-          {/* Status card */}
           <Card>
             <CardBody>
               <h4 className="text-sm font-display font-bold text-primary mb-4">Signal Status</h4>

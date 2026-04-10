@@ -4,6 +4,7 @@ const emergencyContactSchema = new mongoose.Schema({
     name: String,
     phone: String,
     email: String,
+    relationship: String,
 });
 
 const userSchema = new mongoose.Schema(

@@ -1,27 +1,49 @@
 import { useState } from 'react'
-import { MapPin, Briefcase, Moon, Globe, Sparkles, ShieldAlert } from 'lucide-react'
+import { MapPin, Briefcase, Moon, Globe, Sparkles, ShieldAlert, Users } from 'lucide-react'
 import { Card, CardBody, Badge } from '../components/UI'
 
 const tipsData = {
   traveling: [
-    'Share your live location with someone you trust.',
-    'Avoid empty or isolated places.',
-    'Keep emergency contacts easily accessible.',
+    'Share your live location with someone you trust via SafeSphere.',
+    'Always check the license plate and driver photo before entering a commercial vehicle.',
+    'Wait for public transport in well-lit, crowded areas.',
+    'Keep your phone and valuables out of sight while walking in unfamiliar areas.',
+    'Avoid wearing noise-canceling headphones when walking alone at night.',
   ],
   workplace: [
-    'Know all emergency exits in your building.',
-    'Report suspicious behavior immediately.',
-    'Avoid staying late alone when possible.',
+    'Know all emergency exits and alternate escape routes in your building.',
+    'Report any unidentified individuals in "staff only" areas to security.',
+    'Have a "buddy system" for leaving the office late at night.',
+    'Keep your personal belongings in a locked drawer or locker.',
+    'Trust your instincts; if a colleague or situation feels "off," report it.',
   ],
   night: [
-    'Stick to well-lit streets and public areas.',
-    'Avoid distractions like phones while walking.',
-    'Keep keys ready before reaching your door.',
+    'Stick to primary, well-lit streets even if it makes your walk longer.',
+    'Face oncoming traffic so you can see vehicles approaching.',
+    'Hold your keys in your hand before you reach your door or car.',
+    'If you think you are being followed, cross the street or head to a public place.',
+    'Consider carrying a personal safety alarm or pepper spray where legal.',
   ],
   online: [
-    'Never share personal information publicly.',
-    'Use strong and unique passwords.',
-    'Avoid clicking unknown links.',
+    'Enable Two-Factor Authentication (2FA) on all your sensitive accounts.',
+    'Be cautious of social engineering; never share passwords or OTPs over the phone.',
+    'Check your privacy settings regularly on social media platforms.',
+    'Use a VPN when accessing sensitive information on public Wi-Fi.',
+    'Think twice before sharing your current location in "real-time" on stories.',
+  ],
+  dating: [
+    'Always meet in a public place for the first few dates.',
+    'Tell a friend who you are meeting, where you are going, and when you expect to be back.',
+    'Arrange your own transportation to and from the date.',
+    'Keep your drink and food in your sight at all times.',
+    'If you feel uncomfortable, don\'t feel obligated to stay. Make an excuse and leave.',
+  ],
+  home: [
+    'Ensure all entry points (doors and windows) have working locks.',
+    'Outdoor lighting should be motion-activated to deter intruders.',
+    'Never open the door to strangers without verifying their identity.',
+    'If you live alone, avoid advertising it on social media or your mailbox.',
+    'Have an emergency "go-bag" ready with essentials in case of fire or natural disaster.',
   ],
 }
 
@@ -30,6 +52,8 @@ const icons = {
   workplace: Briefcase,
   night: Moon,
   online: Globe,
+  dating: Users,
+  home: Sparkles,
 }
 
 const categoryColors = {
@@ -37,6 +61,8 @@ const categoryColors = {
   workplace: 'bg-info/10 text-info',
   night: 'bg-accent/10 text-accent',
   online: 'bg-amber-500/10 text-amber-600',
+  dating: 'bg-rose-500/10 text-rose-500',
+  home: 'bg-emerald-500/10 text-emerald-600',
 }
 
 export default function SafetyTips() {
@@ -49,13 +75,17 @@ export default function SafetyTips() {
     let tip = ''
 
     if (location === 'street' && time === 'night') {
-      tip = 'Stay in well-lit areas and avoid isolated streets.'
-    } else if (location === 'bus') {
-      tip = 'Sit near other passengers and stay alert.'
-    } else if (location === 'office') {
-      tip = 'Inform someone if you are working late.'
+      tip = 'Walk with confidence, stay in well-lit areas, and keep your hands free (avoid using your phone).'
+    } else if (location === 'bus' && time === 'night') {
+      tip = 'Sit as close to the driver as possible and stay awake. Know your stop in advance.'
+    } else if (location === 'office' && time === 'night') {
+      tip = 'Inform building security you are working late and ask for an escort to your car if needed.'
+    } else if (location === 'bus' && time === 'day') {
+      tip = 'Keep your bag in front of you and be aware of pickpockets in crowded areas.'
+    } else if (location === 'street' && time === 'day') {
+      tip = 'Stay aware of your surroundings and avoid using both earbuds even during the day.'
     } else {
-      tip = 'Always stay aware and trust your instincts.'
+      tip = 'Trust your intuition. If a situation feels wrong, remove yourself from it immediately.'
     }
 
     setGeneratedTip(tip)

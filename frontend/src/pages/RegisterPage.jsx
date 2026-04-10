@@ -8,7 +8,9 @@ import { useAuth } from '../context/AuthContext'
 import toast from 'react-hot-toast'
 
 const registerSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
+  name: z.string()
+    .min(2, 'Name must be at least 2 characters')
+    .regex(/^[a-zA-Z\s]+$/, 'Name can only contain letters and spaces'),
   email: z.string().email('Please enter a valid email'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   confirmPassword: z.string().min(6, 'Please confirm your password'),
@@ -23,7 +25,7 @@ export default function RegisterPage() {
   const { register: authRegister } = useAuth()
   const navigate = useNavigate()
 
-  const { register, handleSubmit, formState: { errors } } = useForm({
+  const { register, handleSubmit, reset, formState: { errors } } = useForm({
     resolver: zodResolver(registerSchema),
     defaultValues: { name: '', email: '', password: '', confirmPassword: '' },
   })
@@ -31,9 +33,16 @@ export default function RegisterPage() {
   const onSubmit = async (data) => {
     setIsLoading(true)
     try {
-      await authRegister(data.name, data.email, data.password)
-      toast.success('Account created! Welcome to SafeSphere 🎉')
-      navigate('/dashboard', { replace: true })
+      const response = await authRegister(data.name.trim(), data.email.trim(), data.password.trim())
+      
+      if (response?.otpRequired) {
+        toast.success(response.message || 'OTP sent to email! 📧')
+        navigate('/verify-otp', { state: { email: data.email } })
+      } else {
+        toast.success('Account created! Welcome to SafeSphere 🎉')
+        navigate('/dashboard', { replace: true })
+      }
+      reset()
     } catch (err) {
       toast.error(err.message || 'Registration failed')
     } finally {

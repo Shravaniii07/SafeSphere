@@ -1,13 +1,23 @@
 import { useState, useEffect } from 'react'
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
+import L from 'leaflet'
 import { Activity, MapPin, Zap, LayoutGrid, ExternalLink, Loader2, Navigation } from 'lucide-react'
-import { FilterButton, MapPlaceholder, EmptyState, Badge } from '../components/UI'
+import { FilterButton, EmptyState, Badge } from '../components/UI'
 import toast from 'react-hot-toast'
+import 'leaflet/dist/leaflet.css'
+
+// Fix leaflet default marker icon
+delete L.Icon.Default.prototype._getIconUrl
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+})
 
 const filters = [
   { id: 'all', label: 'All', icon: LayoutGrid },
   { id: 'hospital', label: 'Hospitals', icon: Activity },
   { id: 'police', label: 'Police', icon: MapPin },
-  { id: 'fire', label: 'Fire Station', icon: Zap },
 ]
 
 const typeConfig = {
@@ -40,17 +50,33 @@ export default function NearbyServices() {
     )
   }, [])
 
-  useEffect(() => {
+  const [retrying, setRetrying] = useState(false)
+  const fetchNearby = async () => {
     if (!position) return
-    const fetchNearby = async () => {
-      setLoading(true)
-      const { lat, lng } = position
-      const radius = 5000
-      const query = `[out:json][timeout:15];(node["amenity"="hospital"](around:${radius},${lat},${lng});node["amenity"="police"](around:${radius},${lat},${lng});node["amenity"="fire_station"](around:${radius},${lat},${lng});way["amenity"="hospital"](around:${radius},${lat},${lng});way["amenity"="police"](around:${radius},${lat},${lng});way["amenity"="fire_station"](around:${radius},${lat},${lng}););out center body;`
+    setLoading(true)
+    setError(null)
+    const { lat, lng } = position
+    const radius = 5000
+    const query = `[out:json][timeout:25];(node["amenity"="hospital"](around:${radius},${lat},${lng});node["amenity"="police"](around:${radius},${lat},${lng});node["amenity"="fire_station"](around:${radius},${lat},${lng});way["amenity"="hospital"](around:${radius},${lat},${lng});way["amenity"="police"](around:${radius},${lat},${lng});way["amenity"="fire_station"](around:${radius},${lat},${lng}););out center body;`
+    
+    // Multiple mirrors for reliability
+    const mirrors = [
+      'https://overpass-api.de/api/interpreter',
+      'https://lz4.overpass-api.de/api/interpreter',
+      'https://z.overpass-api.de/api/interpreter'
+    ]
+
+    let lastError = null
+    for (const mirror of mirrors) {
       try {
-        const res = await fetch('https://overpass-api.de/api/interpreter', {
-          method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: `data=${encodeURIComponent(query)}`,
+        const res = await fetch(mirror, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `data=${encodeURIComponent(query)}`,
         })
+        
+        if (!res.ok) throw new Error(`Mirror ${mirror} failed: ${res.status}`)
+        
         const data = await res.json()
         const results = data.elements.filter(el => el.tags?.name).map(el => {
           const elLat = el.lat || el.center?.lat
@@ -69,20 +95,33 @@ export default function NearbyServices() {
             lat: elLat, lng: elLng, phone: el.tags.phone || el.tags['contact:phone'] || null,
           }
         }).sort((a, b) => a.distRaw - b.distRaw).slice(0, 20)
+        
         setPlaces(results)
-        if (results.length === 0) toast('No services found within 5km.', { icon: '📍' })
+        setLoading(false)
+        setRetrying(false)
+        if (results.length === 0) toast('No services found nearby.', { icon: '📍' })
+        return // Success!
       } catch (err) {
-        console.error('Overpass error:', err)
-        toast.error('Failed to fetch nearby services.')
-      } finally { setLoading(false) }
+        console.warn(`Overpass mirror ${mirror} failed, trying next...`, err)
+        lastError = err
+      }
     }
+    
+    setError('Overpass API is currently overloaded (504). Please try again in a moment.')
+    setLoading(false)
+    setRetrying(false)
+    toast.error('Service data unavailable. Retrying might help.')
+  }
+
+  useEffect(() => {
     fetchNearby()
   }, [position])
 
   const filtered = active === 'all' ? places : places.filter(p => p.type === active)
 
   const openDirections = (place) => {
-    window.open(`https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}`, '_blank', 'noopener')
+    if (!position) return
+    window.open(`https://www.google.com/maps/dir/?api=1&origin=${position.lat},${position.lng}&destination=${place.lat},${place.lng}`, '_blank')
   }
 
   return (
@@ -107,8 +146,39 @@ export default function NearbyServices() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <MapPlaceholder height="min-h-[420px]" label={position ? `📍 ${position.lat.toFixed(4)}°N, ${position.lng.toFixed(4)}°E` : 'Locating...'} />
+        {/* REAL MAP */}
+        <div className="h-[420px] w-full rounded-2xl overflow-hidden border border-slate-100 shadow-elevated">
+          {position && (
+            <MapContainer
+              center={[position.lat, position.lng]}
+              zoom={14}
+              className="h-full w-full z-0"
+            >
+              <TileLayer
+                attribution='&copy; <a href="https://carto.com">CARTO</a>'
+                url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+              />
 
+              {/* USER */}
+              <Marker position={[position.lat, position.lng]}>
+                <Popup>📍 You are here</Popup>
+              </Marker>
+
+              {/* SERVICES */}
+              {filtered.map((p, i) => (
+                <Marker key={i} position={[p.lat, p.lng]}>
+                  <Popup>
+                    <div className="font-sans">
+                      <strong className="text-sm text-primary">{p.name}</strong><br />
+                      <span className="text-xs text-slate-500">{p.type === 'hospital' ? '🏥 Hospital' : p.type === 'police' ? '👮 Police Station' : '🔥 Fire Station'}</span><br />
+                      <span className="text-xs font-bold text-secondary">{p.dist}</span>
+                    </div>
+                  </Popup>
+                </Marker>
+              ))}
+            </MapContainer>
+          )}
+        </div>
         <div className="flex flex-col gap-3 stagger-children">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-16">

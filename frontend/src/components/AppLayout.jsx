@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
-import { Toaster } from 'react-hot-toast'
 import Sidebar from './Sidebar'
 import Navbar from './Navbar'
 import BottomNav from './BottomNav'
@@ -14,7 +13,6 @@ const pageTitles = {
   '/tracking': 'Public Tracking',
   '/notifications': 'Notifications',
   '/travel': 'Travel Safety',
-  '/heatmap': 'Safety Heatmap',
   '/profile': 'Profile',
   '/admin/dashboard': 'Admin Panel',
   '/women-safety': 'Women Safety',
@@ -29,7 +27,6 @@ const pageTitles = {
 const pageTints = {
   '/sos': 'mesh-sos',
   '/location': 'mesh-location',
-  '/heatmap': 'mesh-heatmap',
   '/safety-map': 'mesh-heatmap',
 }
 
@@ -43,11 +40,6 @@ export default function AppLayout() {
 
   return (
     <div className={`flex min-h-screen ${bgClass}`}>
-      <Toaster position="top-right" toastOptions={{
-        style: { fontFamily: "'Inter', system-ui", borderRadius: '14px', fontSize: '14px', fontWeight: '500', padding: '14px 18px', boxShadow: '0 8px 32px rgba(0,0,0,0.08)', border: '1px solid rgba(0,0,0,0.04)', letterSpacing: '-0.01em' },
-        success: { duration: 3000 },
-        error: { duration: 4000 },
-      }} />
 
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[99] lg:hidden"

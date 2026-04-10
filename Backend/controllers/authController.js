@@ -2,6 +2,7 @@ import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { sendOTPEmail } from "../services/emailService.js";
+import { registerSchema, loginSchema } from "../utils/validation.js";
 
 // Helper function to generate token and set cookie
 const generateToken = (res, userId) => {
@@ -12,60 +13,100 @@ const generateToken = (res, userId) => {
     res.cookie("jwt", token, {
         httpOnly: true,
         secure: process.env.NODE_ENV !== "development", // Use secure in production
-        sameSite: "lax", // Better cross-origin support for CORS
+        sameSite: "strict",
         maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
     });
 };
 
 // REGISTER
 export const registerUser = async (req, res) => {
+    // 1. Validate Input
+    const { error } = registerSchema.validate(req.body);
+    if (error) {
+        return res.status(400).json({ success: false, message: error.details[0].message });
+    }
+
     const { name, email, password } = req.body;
 
     const userExists = await User.findOne({ email });
     if (userExists)
-        return res.status(400).json({ message: "User already exists" });
+        return res.status(400).json({ success: false, message: "User already exists" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    const otpExpire = new Date(Date.now() + 59 * 1000); // 59 seconds
 
-    const user = await User.create({
-        name,
-        email,
-        password: hashedPassword,
-        otp,
-        otpExpire,
-        isVerified: false
-    });
+    let user;
+    try {
+        user = await User.create({
+            name,
+            email,
+            password: hashedPassword,
+            otp,
+            otpExpire,
+            isVerified: false
+        });
 
-    if (user) {
         await sendOTPEmail(email, otp);
         res.status(201).json({
+            success: true,
+            otpRequired: true,
             message: "OTP sent to email. Please verify to complete registration."
         });
-    } else {
-        res.status(400).json({ message: "Invalid user data" });
+    } catch (error) {
+        if (user && user._id) {
+            await User.findByIdAndDelete(user._id); // Cleanup if email fails
+        }
+        res.status(400).json({ success: false, message: error.message || "Failed to send OTP to this email. Please check if the email is valid." });
     }
 };
 
 // LOGIN
 export const loginUser = async (req, res) => {
+    // 1. Validate Input
+    const { error } = loginSchema.validate(req.body);
+    if (error) {
+        return res.status(400).json({ success: false, message: error.details[0].message });
+    }
+
     const { email, password } = req.body;
 
     const user = await User.findOne({ email });
 
     if (user && (await bcrypt.compare(password, user.password))) {
+        // ✅ Bypass OTP for Root Admin for smooth dev experience
+        if (user.role === 'admin' && user.email === 'admin@safesphere.com') {
+            generateToken(res, user._id);
+            return res.json({ 
+                success: true, 
+                otpRequired: false, 
+                _id: user._id, 
+                name: user.name, 
+                email: user.email, 
+                role: user.role,
+                message: "Admin access granted!" 
+            });
+        }
+
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const otpExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+        const otpExpire = new Date(Date.now() + 59 * 1000); // 59 seconds
 
         user.otp = otp;
         user.otpExpire = otpExpire;
         await user.save();
 
-        await sendOTPEmail(email, otp);
-        res.json({ message: "OTP sent to email. Please verify to login." });
+        try {
+            await sendOTPEmail(email, otp);
+            res.json({ 
+                success: true,
+                otpRequired: true, 
+                message: "OTP sent to email. Please verify to login." 
+            });
+        } catch (error) {
+            res.status(400).json({ success: false, message: "Failed to send OTP to this email." });
+        }
     } else {
-        res.status(400).json({ message: "Invalid credentials" });
+        res.status(400).json({ success: false, message: "Invalid credentials" });
     }
 };
 
@@ -73,10 +114,10 @@ export const loginUser = async (req, res) => {
 export const verifyOTP = async (req, res) => {
     const { email, otp } = req.body;
 
-    const user = await User.findOne({ 
-        email, 
-        otp, 
-        otpExpire: { $gt: Date.now() } 
+    const user = await User.findOne({
+        email,
+        otp,
+        otpExpire: { $gt: Date.now() }
     });
 
     if (user) {
@@ -94,6 +135,35 @@ export const verifyOTP = async (req, res) => {
         });
     } else {
         res.status(400).json({ message: "Invalid or expired OTP" });
+    }
+};
+
+// RESEND OTP
+export const resendOTP = async (req, res) => {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+
+    if (user) {
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otpExpire = new Date(Date.now() + 59 * 1000); // 59 seconds
+
+        user.otp = otp;
+        user.otpExpire = otpExpire;
+        await user.save();
+
+        try {
+            await sendOTPEmail(email, otp);
+            res.json({ 
+                success: true,
+                otpRequired: true,
+                message: "OTP resent successfully." 
+            });
+        } catch (error) {
+            res.status(400).json({ message: "Failed to send OTP to this email." });
+        }
+    } else {
+        res.status(404).json({ message: "User not found" });
     }
 };
 

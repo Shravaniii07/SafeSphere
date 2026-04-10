@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { AlertTriangle, Globe, Activity, ArrowUpRight, Shield, MapPin, Bell, TrendingUp, Users, Zap } from 'lucide-react'
 import { Card, CardHeader, CardBody, Badge, EmptyState } from '../components/UI'
 import { useApp } from '../context/AppContext'
@@ -39,53 +39,9 @@ function SafetyScoreRing({ score }) {
   )
 }
 
-function getContactCount() {
-  try {
-    const stored = localStorage.getItem('safesphere_emergency_contacts')
-    if (stored) return JSON.parse(stored).length
-  } catch { /* ignore */ }
-  return 3
-}
-
-function getTripHistory() {
-  try {
-    const stored = localStorage.getItem('safesphere_trips')
-    if (stored) return JSON.parse(stored)
-  } catch { /* ignore */ }
-  return []
-}
-
-function getRecentActivity() {
-  const activities = []
-  const trips = getTripHistory()
-  trips.slice(0, 3).forEach(trip => {
-    activities.push({
-      color: 'bg-emerald-500',
-      text: 'Safe trip completed',
-      desc: `${trip.from?.split(',')[0] || 'From'} → ${trip.to?.split(',')[0] || 'To'} (${trip.distance} km)`,
-      time: formatTimeAgo(trip.startTime),
-    })
-  })
-
-  try {
-    const contacts = JSON.parse(localStorage.getItem('safesphere_emergency_contacts') || '[]')
-    if (contacts.length > 3) {
-      const latest = contacts[contacts.length - 1]
-      activities.push({ color: 'bg-violet-500', text: 'Emergency contact added', desc: `Added ${latest.name}`, time: 'Recently' })
-    }
-  } catch { /* ignore */ }
-
-  if (activities.length === 0) {
-    activities.push(
-      { color: 'bg-blue-500', text: 'SafeSphere activated', desc: 'Your safety dashboard is now live', time: 'Just now' },
-      { color: 'bg-violet-500', text: 'Profile created', desc: 'Set up your emergency contacts to get started', time: 'Today' },
-    )
-  }
-  return activities
-}
-
 function formatTimeAgo(timestamp) {
-  const diff = Date.now() - timestamp
+  if (!timestamp) return 'Just now'
+  const diff = Date.now() - new Date(timestamp).getTime()
   const mins = Math.floor(diff / 60000)
   if (mins < 1) return 'Just now'
   if (mins < 60) return `${mins}m ago`
@@ -96,23 +52,32 @@ function formatTimeAgo(timestamp) {
   return `${days}d ago`
 }
 
-function computeSafetyScore() {
-  let score = 60
-  const contacts = getContactCount()
-  score += Math.min(contacts * 5, 20)
-  const trips = getTripHistory()
-  if (trips.length > 0) score += 10
-  if (trips.length > 3) score += 5
-  return Math.min(score, 100)
-}
-
 export default function Dashboard() {
-  const { user } = useApp()
+  const { user, dashboardStats, fetchDashboardStats } = useApp()
   const navigate = useNavigate()
-  const [contactCount] = useState(getContactCount)
-  const [tripCount] = useState(() => getTripHistory().length)
-  const [safetyScore] = useState(computeSafetyScore)
-  const [recentActivity] = useState(getRecentActivity)
+  const [searchParams] = useSearchParams()
+  const searchQuery = searchParams.get('search') || ''
+
+  useEffect(() => {
+    fetchDashboardStats()
+    window.addEventListener('focus', fetchDashboardStats)
+    return () => window.removeEventListener('focus', fetchDashboardStats)
+  }, [fetchDashboardStats])
+
+  if (!dashboardStats) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    )
+  }
+
+  const { activeContacts, locationShares, tripsCompleted, activities, safetyScore } = dashboardStats
+
+  const filteredActivity = activities.filter(a =>
+    a.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    a.desc.toLowerCase().includes(searchQuery.toLowerCase())
+  )
 
   return (
     <div className="stagger-children">
@@ -128,21 +93,21 @@ export default function Dashboard() {
               <span className="text-emerald-300 text-xs font-medium">Systems Active</span>
             </div>
           </div>
-          <h2 className="text-2xl lg:text-3xl font-bold mb-2 tracking-tight">{getGreeting()}, {user.name.split(' ')[0]}</h2>
+          <h2 className="text-2xl lg:text-3xl font-bold mb-2 tracking-tight">{getGreeting()}, {user?.name?.split(' ')[0] || 'Member'}</h2>
           <p className="text-white/40 text-sm max-w-lg">Your safety dashboard is active. All systems operating normally.</p>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Active Contacts" value={String(contactCount)} icon={Users} color="text-blue-500" bgColor="bg-blue-50" />
-        <StatCard label="Location Shares" value={String(Math.min(contactCount, 3))} icon={Globe} color="text-violet-500" bgColor="bg-violet-50" />
-        <StatCard label="Trips Completed" value={String(tripCount)} icon={TrendingUp} color="text-emerald-600" bgColor="bg-emerald-50" />
-        <div className="bg-white rounded-2xl border border-gray-200/60 p-5 shadow-card card-interactive flex items-center gap-4">
+      {/* Stats Overview */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <StatCard label="Active Contacts" value={String(activeContacts)} icon={Users} color="text-secondary" bgColor="bg-secondary/5" />
+        <StatCard label="Location Shares" value={String(locationShares)} icon={Globe} color="text-blue-500" bgColor="bg-blue-50" />
+        <StatCard label="Trips Completed" value={String(tripsCompleted)} icon={TrendingUp} color="text-emerald-600" bgColor="bg-emerald-50" />
+        <div className="bg-white rounded-2xl border border-slate-100/80 p-5 shadow-elevated card-hover flex items-center gap-4">
           <SafetyScoreRing score={safetyScore} />
           <div>
-            <div className="text-xs text-gray-400 font-medium">Safety Score</div>
-            <div className="text-[11px] text-gray-400 mt-0.5">{safetyScore > 80 ? 'Excellent' : safetyScore >= 60 ? 'Good' : 'Needs work'}</div>
+            <div className="text-[11px] font-display font-bold text-primary uppercase tracking-wider mb-0.5">Safety Score</div>
+            <div className="text-[10px] text-slate-400">{safetyScore > 80 ? 'Excellent' : safetyScore >= 60 ? 'Good' : 'Needs work'}</div>
           </div>
         </div>
       </div>
@@ -157,15 +122,23 @@ export default function Dashboard() {
       {/* Activity */}
       <Card>
         <CardHeader>
-          <h3 className="text-[15px] font-semibold text-gray-900">Recent Activity</h3>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center">
+              <Bell className="w-4 h-4 text-primary" />
+            </div>
+            <div>
+              <h3 className="text-[15px] font-display font-bold text-primary">Recent Activity</h3>
+              <p className="text-[11px] text-slate-400">Your latest safety events</p>
+            </div>
+          </div>
           <Badge dot>Today</Badge>
         </CardHeader>
         <CardBody className="stagger-children">
-          {recentActivity.length === 0 ? (
+          {filteredActivity.length === 0 ? (
             <EmptyState icon={Bell} title="No activity yet" description="Start a trip or add contacts to see activity here." />
           ) : (
-            recentActivity.map((a, i) => (
-              <ActivityItem key={i} color={a.color} text={a.text} desc={a.desc} time={a.time} last={i === recentActivity.length - 1} />
+            filteredActivity.map((a, i) => (
+              <ActivityItem key={i} color={a.color} text={a.text} desc={a.desc} time={formatTimeAgo(a.time)} last={i === filteredActivity.length - 1} />
             ))
           )}
         </CardBody>

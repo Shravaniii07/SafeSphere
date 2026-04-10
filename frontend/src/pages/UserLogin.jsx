@@ -18,7 +18,7 @@ export default function UserLogin() {
   const { login } = useAuth()
   const navigate = useNavigate()
 
-  const { register, handleSubmit, formState: { errors } } = useForm({
+  const { register, handleSubmit, reset, formState: { errors } } = useForm({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '' },
   })
@@ -26,9 +26,15 @@ export default function UserLogin() {
   const onSubmit = async (data) => {
     setIsLoading(true)
     try {
-      await login(data.email, data.password)
-      toast.success('Welcome back! 🎉')
-      navigate('/dashboard', { replace: true })
+      const response = await login(data.email.trim(), data.password.trim())
+      if (response?.status === 'pending' || response?.otpRequired) {
+        toast.success('Verification code sent! 📧')
+        navigate('/verify-otp', { state: { email: data.email } })
+      } else {
+        toast.success('Welcome back! 🎉')
+        navigate('/dashboard', { replace: true })
+      }
+      reset()
     } catch (err) {
       toast.error(err.message || 'Login failed')
     } finally {
@@ -111,6 +117,17 @@ export default function UserLogin() {
             </button>
           </form>
 
+          {/* Admin Login Button */}
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <Link 
+              to="/admin/login" 
+              className="w-full flex items-center justify-center gap-2 px-6 py-3 border-2 border-primary/10 text-primary font-display font-bold rounded-xl hover:bg-primary/5 hover:border-primary/20 transition-all duration-200"
+            >
+              <Shield className="w-4 h-4 text-blue-500" />
+              Access Admin Portal
+            </Link>
+          </div>
+
           <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-100/60">
             <div className="flex items-center gap-2 mb-1">
               <Sparkles className="w-3.5 h-3.5 text-blue-500" />
@@ -120,14 +137,11 @@ export default function UserLogin() {
           </div>
         </div>
 
-        <div className="text-center mt-6 animate-fade-in space-y-3">
-          <p className="text-sm text-gray-400">
+        <div className="text-center mt-6 animate-fade-in">
+          <p className="text-sm text-gray-500">
             Don't have an account?{' '}
             <Link to="/register" className="text-blue-500 hover:text-blue-600 font-semibold transition-colors duration-300">Create one</Link>
           </p>
-          <Link to="/admin/login" className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-gray-600 transition-colors duration-300 group">
-            <Shield className="w-4 h-4 group-hover:text-blue-500 transition-colors duration-300" /> Admin Login
-          </Link>
         </div>
       </div>
     </div>

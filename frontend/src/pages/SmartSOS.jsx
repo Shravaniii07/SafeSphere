@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { AlertTriangle, Phone, MapPin, Wifi, ShieldAlert } from 'lucide-react'
 import { Button, Modal } from '../components/UI'
 import toast from 'react-hot-toast'
+import api from '../api/api'
 
 function HeartbeatLine() {
   return (
@@ -114,12 +115,35 @@ export default function SmartSOS() {
       </div>
 
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="⚠️ Confirm SOS Alert"
-        footer={<><Button variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button><Button variant="danger" onClick={() => { setModalOpen(false); toast.success('SOS alert sent to all contacts!') }}>Send SOS Alert</Button></>}>
+        footer={<><Button variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button><Button variant="danger" onClick={async () => { 
+          setModalOpen(false); 
+          const id = toast.loading('Sending SOS alerts...');
+          try {
+            // Get location first
+            let location = { lat: 0, lng: 0 };
+            if (navigator.geolocation) {
+              const pos = await new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject);
+              });
+              location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+            }
+            
+            const res = await api.post('/api/sos/trigger', { location });
+            if (res.data.success) {
+              toast.success('SOS alert sent to all contacts!', { id });
+            } else {
+              toast.error('Failed to send SOS. Please call emergency services.', { id });
+            }
+          } catch (err) {
+            console.error('SOS Error:', err);
+            toast.error('Connection error. Please call contacts directly.', { id });
+          }
+        }}>Send SOS Alert</Button></>}>
         <div className="p-4 bg-red-50 rounded-xl border border-red-100/80 mb-4">
           <p className="text-sm text-accent font-medium">This action cannot be undone easily.</p>
         </div>
         <p className="text-slate-500 text-sm leading-relaxed">
-          This will immediately alert <strong className="text-primary">all your emergency contacts</strong> with your current location. They will receive notifications via SMS and in-app alerts.
+          This will immediately alert <strong className="text-primary">all your emergency contacts</strong> with your current location. They will receive notifications via Email, SMS, and in-app alerts.
         </p>
       </Modal>
     </>

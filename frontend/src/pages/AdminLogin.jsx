@@ -27,7 +27,14 @@ export default function AdminLogin() {
   const onSubmit = async (data) => {
     setIsLoading(true)
     try {
-      await adminLogin(data.email, data.password, data.secretKey)
+      const res = await adminLogin(data.email.trim(), data.password.trim(), data.secretKey?.trim())
+      
+      if (res?.otpRequired) {
+        toast.success('Verification code sent! 📧')
+        navigate('/verify-otp', { state: { email: data.email, isAdmin: true } })
+        return
+      }
+
       toast.success('Admin access granted ✅')
       navigate('/admin/dashboard', { replace: true })
     } catch (err) {

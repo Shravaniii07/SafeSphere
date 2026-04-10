@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { AlertTriangle, Globe, Activity, Info, Shield, Check, Trash2, BellOff, Bell, Megaphone } from 'lucide-react'
 import { Card, CardHeader, CardBody, Button, Badge, EmptyState } from '../components/UI'
+import { useApp } from '../context/AppContext'
 import toast from 'react-hot-toast'
-
-const NOTIF_KEY = 'safesphere_notifications'
+import api from '../api/api'
 
 const iconMap = {
   sos: { icon: AlertTriangle, color: 'bg-accent/10 text-accent', border: 'border-accent/20' },
@@ -15,64 +15,8 @@ const iconMap = {
   admin: { icon: Megaphone, color: 'bg-secondary/10 text-secondary', border: 'border-secondary/20' },
 }
 
-function generateInitialNotifications() {
-  const now = Date.now()
-  const notifs = [
-    { id: 1, type: 'system', title: 'Welcome to SafeSphere', desc: 'Your safety dashboard is now active. Set up your emergency contacts to get started.', time: now, read: false },
-    { id: 2, type: 'info', title: 'Location services', desc: 'Enable GPS for real-time tracking and nearby services.', time: now - 60000, read: false },
-    { id: 3, type: 'contact', title: 'Add emergency contacts', desc: 'Add at least 3 emergency contacts for maximum safety.', time: now - 300000, read: false },
-  ]
-
-  // Pull real trips from travel history
-  try {
-    const trips = JSON.parse(localStorage.getItem('safesphere_trips') || '[]')
-    trips.slice(0, 3).forEach((trip, i) => {
-      notifs.unshift({
-        id: 100 + i,
-        type: 'trip',
-        title: 'Trip completed safely',
-        desc: `${trip.from?.split(',')[0]} → ${trip.to?.split(',')[0]} (${trip.distance} km)`,
-        time: trip.endTime || trip.startTime,
-        read: false,
-      })
-    })
-  } catch { /* ignore */ }
-
-  // Pull real contact additions
-  try {
-    const contacts = JSON.parse(localStorage.getItem('safesphere_emergency_contacts') || '[]')
-    if (contacts.length > 3) {
-      const latest = contacts[contacts.length - 1]
-      notifs.unshift({
-        id: 200,
-        type: 'contact',
-        title: 'Contact added',
-        desc: `${latest.name} was added as an emergency contact.`,
-        time: now - 120000,
-        read: false,
-      })
-    }
-  } catch { /* ignore */ }
-
-  return notifs.sort((a, b) => b.time - a.time)
-}
-
-function loadNotifications() {
-  try {
-    const stored = localStorage.getItem(NOTIF_KEY)
-    if (stored) {
-      const parsed = JSON.parse(stored)
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed
-    }
-  } catch { /* ignore */ }
-  return generateInitialNotifications()
-}
-
-function saveNotifications(notifs) {
-  try { localStorage.setItem(NOTIF_KEY, JSON.stringify(notifs)) } catch { /* ignore */ }
-}
-
-function formatTimeAgo(timestamp) {
+function formatTimeAgo(dateInput) {
+  const timestamp = new Date(dateInput).getTime()
   const diff = Date.now() - timestamp
   const mins = Math.floor(diff / 60000)
   if (mins < 1) return 'Just now'
@@ -92,26 +36,14 @@ const priorityLabels = {
 }
 
 export default function Notifications() {
-  const [notifications, setNotifications] = useState(loadNotifications)
+  const { notifications, setNotifications, fetchNotifs, user } = useApp()
   const [filter, setFilter] = useState('all') // all, unread, admin
 
-  useEffect(() => { saveNotifications(notifications) }, [notifications])
-
-  // Listen for new admin notifications arriving in localStorage
   useEffect(() => {
-    const handleStorage = (e) => {
-      if (e.key === NOTIF_KEY) {
-        try {
-          const updated = JSON.parse(e.newValue || '[]')
-          if (Array.isArray(updated)) setNotifications(updated)
-        } catch { /* ignore */ }
-      }
-    }
-    window.addEventListener('storage', handleStorage)
-    return () => window.removeEventListener('storage', handleStorage)
-  }, [])
+    fetchNotifs()
+  }, [fetchNotifs])
 
-  const unreadCount = notifications.filter(n => !n.read).length
+  const unreadCount = user?.unreadNotifications || 0
   const adminCount = notifications.filter(n => n.isAdmin).length
   const displayed = filter === 'unread'
     ? notifications.filter(n => !n.read)
@@ -119,47 +51,75 @@ export default function Notifications() {
       ? notifications.filter(n => n.isAdmin)
       : notifications
 
-  const markAsRead = (id) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
+  const markAsRead = async (id) => {
+    try {
+      setNotifications(prev => prev.map(n => n._id === id ? { ...n, read: true } : n))
+      await api.put(`/api/notifications/${id}/read`)
+      fetchNotifs()
+    } catch (err) {
+      console.error("Mark read error:", err)
+    }
   }
 
-  const markAllRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })))
-    toast.success('All notifications marked as read')
+  const markAllRead = async () => {
+    try {
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+      await api.put('/api/notifications/read-all')
+      toast.success('All notifications marked as read')
+      fetchNotifs()
+    } catch (err) {
+      console.error("Mark all read error:", err)
+    }
   }
 
-  const dismissNotif = (id) => {
-    const removed = notifications.find(n => n.id === id)
-    setNotifications(prev => prev.filter(n => n.id !== id))
-    toast.success(
-      (t) => (
-        <span className="flex items-center gap-3">
-          Notification dismissed
-          <button className="text-secondary font-semibold underline cursor-pointer" onClick={() => {
-            setNotifications(prev => [...prev, removed].sort((a, b) => b.time - a.time))
-            toast.dismiss(t.id)
-          }}>Undo</button>
-        </span>
-      ),
-      { duration: 4000 }
-    )
+  const dismissNotif = async (id) => {
+    try {
+      const removed = notifications.find(n => n._id === id)
+      setNotifications(prev => prev.filter(n => n._id !== id))
+      await api.delete(`/api/notifications/${id}`)
+      fetchNotifs()
+      
+      toast.success(
+        (t) => (
+          <span className="flex items-center gap-3">
+            Notification dismissed
+            <button className="text-secondary font-semibold underline cursor-pointer" onClick={() => {
+              // Note: Undo here only restores local state
+              setNotifications(prev => [...prev, removed].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)))
+              toast.dismiss(t.id)
+              toast.error("Note: Undo is temporary and won't persist after refresh", { id: 'undo-warn' })
+            }}>Undo</button>
+          </span>
+        ),
+        { duration: 4000 }
+      )
+    } catch (err) {
+      console.error("Dismiss error:", err)
+    }
   }
 
-  const clearAll = () => {
-    const old = [...notifications]
-    setNotifications([])
-    toast.success(
-      (t) => (
-        <span className="flex items-center gap-3">
-          All notifications cleared
-          <button className="text-secondary font-semibold underline cursor-pointer" onClick={() => {
-            setNotifications(old)
-            toast.dismiss(t.id)
-          }}>Undo</button>
-        </span>
-      ),
-      { duration: 5000 }
-    )
+  const clearAll = async () => {
+    try {
+      const old = [...notifications]
+      setNotifications([])
+      await api.delete('/api/notifications')
+      fetchNotifs()
+      
+      toast.success(
+        (t) => (
+          <span className="flex items-center gap-3">
+            All notifications cleared
+            <button className="text-secondary font-semibold underline cursor-pointer" onClick={() => {
+              setNotifications(old)
+              toast.dismiss(t.id)
+            }}>Undo</button>
+          </span>
+        ),
+        { duration: 5000 }
+      )
+    } catch (err) {
+      console.error("Clear all error:", err)
+    }
   }
 
   return (
@@ -221,7 +181,7 @@ export default function Notifications() {
                 const Icon = cfg.icon
                 return (
                   <div
-                    key={n.id}
+                    key={n._id}
                     className={`group flex items-start gap-4 p-4 rounded-xl transition-all duration-200 cursor-pointer hover:bg-slate-50 ${
                       !n.read
                         ? isAdminNotif
@@ -229,7 +189,7 @@ export default function Notifications() {
                           : 'bg-secondary/[0.03] border border-secondary/10'
                         : 'border border-transparent'
                     }`}
-                    onClick={() => markAsRead(n.id)}
+                    onClick={() => markAsRead(n._id)}
                   >
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${cfg.color} transition-transform duration-200 group-hover:scale-105`}>
                       <Icon className="w-5 h-5" />
@@ -245,7 +205,7 @@ export default function Notifications() {
                           </Badge>
                         )}
                       </div>
-                      <p className="text-xs text-slate-400">{n.desc}</p>
+                      <p className="text-xs text-slate-400">{n.desc || n.message}</p>
                       {isAdminNotif && n.adminType && (
                         <div className="flex items-center gap-2 mt-1.5">
                           <Badge variant={priorityLabels[n.adminType]?.variant || 'info'} className="text-[10px]">
@@ -255,9 +215,9 @@ export default function Notifications() {
                       )}
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-[11px] text-slate-400 font-mono whitespace-nowrap">{formatTimeAgo(n.time)}</span>
+                      <span className="text-[11px] text-slate-400 font-mono whitespace-nowrap">{formatTimeAgo(n.createdAt)}</span>
                       <button
-                        onClick={(e) => { e.stopPropagation(); dismissNotif(n.id) }}
+                        onClick={(e) => { e.stopPropagation(); dismissNotif(n._id) }}
                         className="p-1.5 rounded-lg text-slate-300 hover:bg-accent-50 hover:text-accent transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
                         aria-label="Dismiss"
                       >

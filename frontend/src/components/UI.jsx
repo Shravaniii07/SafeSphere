@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { X, MapPin } from 'lucide-react'
 
 function Spinner({ className = 'w-4 h-4' }) {
@@ -144,11 +145,13 @@ export function Modal({ isOpen, onClose, title, children, footer }) {
       return () => { document.body.style.overflow = ''; window.removeEventListener('keydown', handler) }
     }
   }, [isOpen, onClose])
+
   if (!isOpen) return null
-  return (
+
+  return createPortal(
     <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4" style={{ animation: 'modal-overlay-in 0.25s ease' }}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-md" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-elevated-lg w-full max-w-[440px] p-8 border border-gray-100" style={{ animation: 'modal-content-in 0.4s cubic-bezier(0.16,1,0.3,1)' }} onClick={e => e.stopPropagation()}>
+      <div className="relative bg-white rounded-2xl shadow-elevated-lg w-full max-w-[440px] p-8 border border-gray-100 dark:bg-slate-900" style={{ animation: 'modal-content-in 0.4s cubic-bezier(0.16,1,0.3,1)' }} onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
           <button onClick={onClose} className="w-9 h-9 rounded-xl flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-all duration-300 cursor-pointer"><X className="w-[18px] h-[18px]" /></button>
@@ -156,7 +159,8 @@ export function Modal({ isOpen, onClose, title, children, footer }) {
         <div className="mb-6">{children}</div>
         {footer && <div className="flex gap-3 justify-end">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

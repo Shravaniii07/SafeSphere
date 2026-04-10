@@ -1,19 +1,81 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useParams } from 'react-router-dom'
 import { MapPin, Shield, Clock, Navigation, Wifi, Copy } from 'lucide-react'
-import { MapPlaceholder } from '../components/UI'
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
+import api from '../api/api'
 import { useApp } from '../context/AppContext'
 import toast from 'react-hot-toast'
 
+// Fix leaflet default marker icon
+delete L.Icon.Default.prototype._getIconUrl
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+})
+
+const createIcon = (color) => L.divIcon({
+  className: 'custom-marker',
+  html: `<div style="background:${color};width:24px;height:24px;border-radius:50%;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:center;"></div>`,
+  iconSize: [24, 24],
+  iconAnchor: [12, 12],
+})
+
 export default function Tracking() {
   const { user } = useApp()
+  const { trackingId } = useParams()
   const [position, setPosition] = useState(null)
   const [lastUpdate, setLastUpdate] = useState(null)
   const [accuracy, setAccuracy] = useState(null)
   const [timeAgo, setTimeAgo] = useState('Connecting...')
+  const [errorCode, setError] = useState(null)
+  const [viewingUserName, setViewingUserName] = useState('')
+  const mapRef = useRef(null)
 
-  // Watch real GPS position
+  // Watch remote position (from tracking session)
   useEffect(() => {
-    if (!navigator.geolocation) return
+    if (!trackingId || trackingId === 'track' || trackingId === 'tracking') return
+
+    const fetchTracking = async () => {
+      const cleanId = trackingId.replace(/[.\s]+$/, '');
+      try {
+        let res = await api.get(`/api/tracking/public/${cleanId}`).catch(e => e.response)
+        
+        if (!res || (res.status === 404)) {
+          res = await api.get(`/api/trip/track/${trackingId}`).catch(e => e.response)
+        }
+
+        if (!res || !res.data?.success) {
+          setError(res?.data?.message || "Tracking ID not found or expired")
+          return
+        }
+
+        const data = res.data
+        if (data.location) {
+          setPosition({ lat: data.location.lat, lng: data.location.lng })
+          setLastUpdate(Date.now())
+          setError(null)
+          if (data.user?.name) setViewingUserName(data.user.name)
+          if (data.status === 'completed' || data.status === 'inactive') {
+            setError("This tracking session has ended safely")
+          }
+        }
+      } catch (err) {
+        setError("Network error. Retrying...")
+      }
+    }
+
+    fetchTracking()
+    const interval = setInterval(fetchTracking, 5000)
+    return () => clearInterval(interval)
+  }, [trackingId])
+
+  // Watch local position (for self-tracking)
+  useEffect(() => {
+    const isDonor = !trackingId || trackingId === 'track' || trackingId === 'tracking'
+    if (!navigator.geolocation || !isDonor) return
 
     const id = navigator.geolocation.watchPosition(
       (pos) => {
@@ -41,11 +103,12 @@ export default function Tracking() {
   }, [lastUpdate])
 
   const copyLink = () => {
-    if (!position) return
-    const url = `https://safesphere.app/track?lat=${position.lat}&lng=${position.lng}`
+    if (!trackingId) return
+    const baseUrl = window.location.origin
+    const url = `${baseUrl}/track/${trackingId}`
     navigator.clipboard.writeText(url)
       .then(() => toast.success('Tracking link copied!'))
-      .catch(() => toast.success(`Location: ${position.lat.toFixed(6)}, ${position.lng.toFixed(6)}`))
+      .catch(() => toast.success(`Link: ${url}`))
   }
 
   return (
@@ -57,7 +120,9 @@ export default function Tracking() {
           </div>
           <span className="font-display text-xl font-bold text-primary tracking-tight">SafeSphere</span>
         </div>
-        <h2 className="text-2xl lg:text-3xl font-display font-bold text-primary tracking-tight">{user.name} is sharing their location</h2>
+        <h2 className="text-2xl lg:text-3xl font-display font-bold text-primary tracking-tight">
+          {viewingUserName ? `${viewingUserName} is sharing their location` : (trackingId && trackingId !== 'track' ? 'Tracking Session' : `${user.name} (You)`)}
+        </h2>
         <p className="text-slate-500 text-sm mt-2">Real-time tracking link · Encrypted & secure</p>
       </div>
 
@@ -76,9 +141,44 @@ export default function Tracking() {
         </div>
       )}
 
-      <MapPlaceholder label={position ? `📍 ${position.lat.toFixed(4)}°N, ${position.lng.toFixed(4)}°E` : 'Acquiring GPS...'} height="min-h-[320px]" />
+      {errorCode && (
+        <div className="bg-red-50 border border-red-100 rounded-xl p-4 text-center mb-6">
+          <p className="text-red-600 text-sm font-medium">{errorCode}</p>
+        </div>
+      )}
+
+      {/* Map display */}
+      <div className="relative rounded-2xl overflow-hidden border border-slate-100 shadow-elevated mb-6" style={{ height: '400px' }}>
+        {!position ? (
+          <div className="absolute inset-0 bg-slate-50 flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-10 h-10 border-4 border-secondary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+              <p className="text-sm text-slate-400 font-medium">Acquiring live GPS...</p>
+            </div>
+          </div>
+        ) : (
+          <MapContainer 
+            center={[position.lat, position.lng]} 
+            zoom={15} 
+            style={{ height: '100%', width: '100%' }}
+            className="z-0"
+            ref={mapRef}
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://carto.com">CARTO</a>'
+              url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+            />
+            <Marker position={[position.lat, position.lng]} icon={createIcon('#10B981')}>
+              <Popup>
+                <div className="text-xs font-semibold">{viewingUserName || 'User'}'s Current Location</div>
+              </Popup>
+            </Marker>
+          </MapContainer>
+        )}
+      </div>
 
       <div className="flex items-center justify-center gap-6 p-5 bg-white rounded-2xl border border-slate-100/80 shadow-elevated mt-6">
+
         <div className="flex items-center gap-2">
           <span className="relative flex h-2.5 w-2.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />

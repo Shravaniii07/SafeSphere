@@ -15,7 +15,8 @@ export const createTrip = async (userId, data) => {
         startLocation: { lat, lng },
         currentLocation: { lat, lng },
         trackingId: uuidv4(),
-        status: "active"
+        status: "active",
+        autoShare: data.autoShare ?? true,
     });
 
     return trip;

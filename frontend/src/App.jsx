@@ -4,10 +4,12 @@ import { AppProvider } from './context/AppContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import PublicRoute from './components/PublicRoute'
 import AppLayout from './components/AppLayout'
+import { Toaster } from 'react-hot-toast'
 
 // Public pages
 import LandingPage from './pages/LandingPage'
 import UserLogin from './pages/UserLogin'
+import VerifyOTP from './pages/VerifyOTP'
 import AdminLogin from './pages/AdminLogin'
 import RegisterPage from './pages/RegisterPage'
 import NotFound from './pages/NotFound'
@@ -21,7 +23,6 @@ import EmergencyInfo from './pages/EmergencyInfo'
 import Tracking from './pages/Tracking'
 import Notifications from './pages/Notifications'
 import TravelSafety from './pages/TravelSafety'
-import SafetyHeatmap from './pages/SafetyHeatmap'
 import Profile from './pages/Profile'
 import AdminPanel from './pages/AdminPanel'
 
@@ -39,11 +40,17 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <AppProvider>
+          <Toaster position="top-right" toastOptions={{
+            style: { fontFamily: "'Inter', system-ui", borderRadius: '14px', fontSize: '14px', fontWeight: '500', padding: '14px 18px', boxShadow: '0 8px 32px rgba(0,0,0,0.08)', border: '1px solid rgba(0,0,0,0.04)', letterSpacing: '-0.01em' },
+            success: { duration: 3000 },
+            error: { duration: 4000 },
+          }} />
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<LandingPage />} />
             <Route element={<PublicRoute />}>
               <Route path="/login" element={<UserLogin />} />
+              <Route path="/verify-otp" element={<VerifyOTP />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/admin/login" element={<AdminLogin />} />
             </Route>
@@ -59,7 +66,6 @@ export default function App() {
                 <Route path="/tracking" element={<Tracking />} />
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/travel" element={<TravelSafety />} />
-                <Route path="/heatmap" element={<SafetyHeatmap />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/women-safety" element={<WomenSafety />} />
                 <Route path="/map" element={<SafetyMapPage />} />

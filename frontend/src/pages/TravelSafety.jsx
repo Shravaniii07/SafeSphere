@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { Play, Route, Square, Clock, Navigation, MapPin, Shield, AlertTriangle, CheckCircle, History } from 'lucide-react'
+import { Play, Route, Square, Clock, Navigation, MapPin, Shield, CheckCircle, History, Trash2, AlertTriangle } from 'lucide-react'
+import api from '../api/api'
 import { Card, CardHeader, CardBody, Button, Input, Toggle, Badge, EmptyState } from '../components/UI'
 import toast from 'react-hot-toast'
 
@@ -35,10 +36,14 @@ function safetyScoreFromDistance(km) {
 export default function TravelSafety() {
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
-  const [autoShare, setAutoShare] = useState(true)
-  const [checkIns, setCheckIns] = useState(false)
-  const [deviation, setDeviation] = useState(true)
+  // Load autoShare from localStorage, default to true
+  const [autoShare, setAutoShare] = useState(() => {
+    const saved = localStorage.getItem('safesphere_autoshare')
+    return saved !== null ? JSON.parse(saved) : true
+  })
   const [starting, setStarting] = useState(false)
+  const [updatingDest, setUpdatingDest] = useState(false)
+  const [newDestination, setNewDestination] = useState('')
 
   // Trip state
   const [tripActive, setTripActive] = useState(false)
@@ -49,14 +54,53 @@ export default function TravelSafety() {
   const watchRef = useRef(null)
 
   // Trip history
-  const [tripHistory, setTripHistory] = useState(loadTrips)
+  const [tripHistory, setTripHistory] = useState([])
+  const syncIntervalRef = useRef(null)
+
+  // ── Persist autoShare to localStorage ──────────────────────────────────
+  useEffect(() => {
+    localStorage.setItem('safesphere_autoshare', JSON.stringify(autoShare))
+  }, [autoShare])
+
+  // ── Fetch active trip and history on mount ────────────────────────────
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // 1. Check for active trip
+        const activeRes = await api.get('/api/trip/active')
+        if (activeRes.data.success && activeRes.data.data) {
+          const active = activeRes.data.data
+          setTripData({
+            from: 'Your starting point',
+            to: active.destination,
+            distance: '...',
+            eta: '...',
+            startTime: new Date(active.createdAt).getTime(),
+            trackingId: active.trackingId,
+            autoShare: active.autoShare,
+            deviationAlerts: active.deviationAlerts
+          })
+          setTripActive(true)
+          const diff = Math.floor((Date.now() - new Date(active.createdAt).getTime()) / 1000)
+          setElapsed(diff > 0 ? diff : 0)
+        }
+
+        // 2. Load history
+        const historyRes = await api.get('/api/trip/recent')
+        setTripHistory(historyRes.data.data || [])
+      } catch (err) {
+        console.error('Initial data fetch error:', err)
+      }
+    }
+    fetchData()
+  }, [])
 
   // Live GPS position tracking
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => setCurrentPosition({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => {},
+        () => { },
         { enableHighAccuracy: true }
       )
     }
@@ -82,8 +126,12 @@ export default function TravelSafety() {
   useEffect(() => {
     if (tripActive && navigator.geolocation) {
       watchRef.current = navigator.geolocation.watchPosition(
-        (pos) => setCurrentPosition({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => {},
+        (pos) => {
+          const lat = pos.coords.latitude
+          const lng = pos.coords.longitude
+          setCurrentPosition({ lat, lng })
+        },
+        () => { },
         { enableHighAccuracy: true }
       )
       return () => navigator.geolocation.clearWatch(watchRef.current)
@@ -131,47 +179,126 @@ export default function TravelSafety() {
     const distance = fromCoords ? haversine(fromCoords.lat, fromCoords.lng, toCoords.lat, toCoords.lng) : 0
     const etaMinutes = Math.round(distance / 0.5) // ~30 km/h average speed in city
 
-    const trip = {
-      from: fromGeo?.name || from,
-      to: toGeo?.name || to,
-      fromCoords,
-      toCoords,
-      distance: distance.toFixed(1),
-      eta: etaMinutes,
-      startTime: Date.now(),
-    }
+    try {
+      const res = await api.post('/api/trip/start', {
+        destination: toGeo?.name || to,
+        eta: etaMinutes,
+        lat: fromCoords.lat,
+        lng: fromCoords.lng,
+        autoShare: autoShare
+      })
 
-    setTripData(trip)
-    setTripActive(true)
-    setElapsed(0)
-    setStarting(false)
+      const trip = {
+        from: fromGeo?.name || from,
+        to: toGeo?.name || to,
+        fromCoords,
+        toCoords,
+        distance: distance.toFixed(1),
+        eta: etaMinutes,
+        startTime: Date.now(),
+        trackingId: res.data.trackingId
+      }
 
-    if (autoShare) {
-      toast.success('Trip started! Contacts notified with your route.')
-    } else {
-      toast.success('Trip started! Tracking your journey.')
+      setTripData(trip)
+      setTripActive(true)
+      setElapsed(0)
+      setStarting(false)
+
+      if (autoShare) {
+        toast.success('Trip started! Contacts notified with your route.')
+      } else {
+        toast.success('Trip started! Tracking your journey.')
+      }
+    } catch (err) {
+      toast.error('Failed to start trip on backend')
+      setStarting(false)
     }
   }
 
-  const endTrip = () => {
-    clearInterval(elapsedRef.current)
-    if (watchRef.current) navigator.geolocation.clearWatch(watchRef.current)
-
-    const completedTrip = {
-      ...tripData,
-      endTime: Date.now(),
-      duration: elapsed,
-      status: 'completed',
+  // ── Update Destination ───────────────────────────────────────────────
+  const updateDestination = async () => {
+    if (!newDestination.trim()) {
+      toast.error('Please enter a new destination')
+      return
     }
+    setUpdatingDest(true)
+    try {
+      // 1. Geocode new destination
+      const toGeo = await geocodePlaceName(newDestination)
+      const toCoords = toGeo ? { lat: toGeo.lat, lng: toGeo.lng } : null
 
-    const updated = [completedTrip, ...tripHistory].slice(0, 10) // keep last 10
-    setTripHistory(updated)
-    saveTrips(updated)
+      let distance = '...'
+      let etaMinutes = null
 
-    setTripActive(false)
-    setTripData(null)
-    setElapsed(0)
-    toast.success('Trip completed safely! ✅')
+      if (toCoords && currentPosition) {
+        const distKm = haversine(currentPosition.lat, currentPosition.lng, toCoords.lat, toCoords.lng)
+        distance = distKm.toFixed(1)
+        etaMinutes = Math.round(distKm / 0.5) // ~30 km/h average
+      }
+
+      // 2. Call backend
+      const res = await api.post('/api/trip/update-destination', {
+        destination: toGeo?.name || newDestination,
+        eta: etaMinutes,
+        autoShare: autoShare
+      })
+
+      if (res.data.success) {
+        setTripData(prev => ({
+          ...prev,
+          to: toGeo?.name || newDestination,
+          distance: distance,
+          eta: etaMinutes || prev.eta
+        }))
+        setNewDestination('')
+        toast.success('Destination updated and ETA recalculated! 🔄')
+      }
+    } catch (err) {
+      console.error('[TravelSafety] Update destination error:', err)
+      toast.error('Failed to update destination')
+    } finally {
+      setUpdatingDest(false)
+    }
+  }
+
+  // ── End trip ───────────────────────────────────────────────────────────
+  const endTrip = async () => {
+    try {
+      // ✅ Call backend to end trip
+      const res = await api.post('/api/trip/end', { autoShare })
+      if (res.data.success) {
+        toast.success('Trip completed safely! ✅')
+        // Refresh history to include the newly completed trip
+        api.get('/api/trip/recent')
+          .then(recent => setTripHistory(recent.data.data || []))
+      }
+    } catch (err) {
+      console.error('Failed to end trip on backend:', err)
+      toast.error('Trip ended locally, but server update failed')
+    } finally {
+      // Clean up local state regardless of server success
+      clearInterval(elapsedRef.current)
+      if (watchRef.current) navigator.geolocation.clearWatch(watchRef.current)
+      if (syncIntervalRef.current) clearInterval(syncIntervalRef.current)
+
+      setTripActive(false)
+      setTripData(null)
+      setElapsed(0)
+    }
+  }
+
+  // ── Delete a trip from history ─────────────────────────────────────────
+  const handleDeleteTrip = async (id) => {
+    if (!window.confirm('Delete this trip from your history?')) return
+    try {
+      const res = await api.delete(`/api/trip/${id}`)
+      if (res.data.success) {
+        setTripHistory(prev => prev.filter(t => t._id !== id))
+        toast.success('Trip record deleted')
+      }
+    } catch (err) {
+      toast.error('Failed to delete trip')
+    }
   }
 
   const formatElapsed = (secs) => {
@@ -251,8 +378,25 @@ export default function TravelSafety() {
                     </div>
                   )}
 
-                  <Button variant="danger" size="lg" full onClick={endTrip}>
-                    <Square className="w-4 h-4" /> End Trip
+                  <div className="h-px bg-slate-100 my-6" />
+
+                  {/* Update Destination UI */}
+                  <div className="mb-6 space-y-3">
+                    <p className="text-[13px] font-semibold text-slate-700">Change Destination</p>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="New destination..."
+                        value={newDestination}
+                        onChange={e => setNewDestination(e.target.value)}
+                        className="flex-1 px-4 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-secondary transition-colors"
+                      />
+                      <Button variant="outline" size="sm" isLoading={updatingDest} onClick={updateDestination}>Update</Button>
+                    </div>
+                  </div>
+
+                  <Button variant="teal" size="lg" shadow="glow" full onClick={endTrip}>
+                    <CheckCircle className="w-5 h-5" /> Mark as Completed
                   </Button>
                 </>
               )}
@@ -274,20 +418,34 @@ export default function TravelSafety() {
                 <EmptyState icon={Route} title="No trips yet" description="Start your first trip to see it here." />
               ) : (
                 <div className="flex flex-col gap-3 stagger-children">
-                  {tripHistory.map((trip, i) => (
-                    <div key={i} className="flex items-center gap-4 p-4 border border-slate-100/80 rounded-xl hover:border-slate-200 hover:shadow-sm transition-all duration-200">
-                      <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
-                        <CheckCircle className="w-5 h-5 text-emerald-500" />
+                  {tripHistory
+                    .filter(t => t.status !== 'active')
+                    .map((trip, i) => (
+                      <div key={i} className="flex items-center gap-4 p-4 border border-slate-100/80 rounded-xl hover:border-slate-200 hover:shadow-sm transition-all duration-200">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
+                          <CheckCircle className="w-5 h-5 text-emerald-500" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-primary truncate">
+                            {trip.destination || 'Unknown Destination'}
+                          </p>
+                          <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
+                            <span className={`inline-block w-1.5 h-1.5 rounded-full ${trip.status === 'completed' ? 'bg-secondary' : 'bg-slate-400'}`} />
+                            {trip.status} · {new Date(trip.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                        <Badge variant={trip.status === 'completed' ? 'primary' : 'danger'} dot>
+                          {trip.status === 'completed' ? 'Done' : 'Expired'}
+                        </Badge>
+                        <button 
+                          onClick={() => handleDeleteTrip(trip._id)}
+                          className="p-2 text-slate-300 hover:text-accent hover:bg-accent/5 rounded-lg transition-all ml-2"
+                          title="Delete trip"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-primary truncate">{trip.from.split(',')[0]} → {trip.to.split(',')[0]}</p>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          {trip.distance} km · {formatDuration(trip.duration)} · {new Date(trip.startTime).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </div>
-                      <Badge variant="success" dot>Safe</Badge>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               )}
             </CardBody>
@@ -329,9 +487,7 @@ export default function TravelSafety() {
             <CardBody>
               <h4 className="text-sm font-display font-bold text-primary mb-5">Safety Settings</h4>
               <div className="space-y-5">
-                <Toggle label="Auto-share" description="Share with emergency contacts" checked={autoShare} onChange={() => setAutoShare(!autoShare)} />
-                <Toggle label="Check-ins" description="Periodic safety confirmations" checked={checkIns} onChange={() => setCheckIns(!checkIns)} />
-                <Toggle label="Deviation alerts" description="Alert on route changes" checked={deviation} onChange={() => setDeviation(!deviation)} />
+                <Toggle label="Auto-share" description="Notify contacts automatically" checked={autoShare} onChange={() => setAutoShare(!autoShare)} />
               </div>
             </CardBody>
           </Card>

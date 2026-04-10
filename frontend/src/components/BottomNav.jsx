@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { LayoutDashboard, AlertTriangle, Globe, MapPin, User, Bell } from 'lucide-react'
 import { useApp } from '../context/AppContext'
+import { useAuth } from '../context/AuthContext'
 
 const navItems = [
   { id: '/dashboard', icon: LayoutDashboard, label: 'Home' },
@@ -11,17 +12,20 @@ const navItems = [
 ]
 
 export default function BottomNav() {
+  const { user } = useApp()
+  const { role } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
-  const { user } = useApp()
+
+  const filteredItems = role === 'admin' ? navItems.filter(item => !item.isSos) : navItems
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-2xl border-t border-gray-100 px-2 pb-[max(4px,env(safe-area-inset-bottom))]" role="navigation" aria-label="Bottom navigation">
       <div className="flex items-center justify-around h-16 max-w-md mx-auto">
-        {navItems.map(item => {
+        {filteredItems.map(item => {
           const isActive = location.pathname === item.id
 
-          if (item.isCenter) {
+          if (item.isCenter || item.isSos) {
             return (
               <button key={item.id} onClick={() => navigate(item.id)} aria-label="SOS"
                 className="relative -mt-5 w-14 h-14 rounded-full bg-red-500 text-white flex items-center justify-center shadow-[0_4px_20px_rgba(239,68,68,0.3)] cursor-pointer hover:bg-red-600 hover:scale-105 active:scale-95 transition-all duration-300 animate-sos-glow">

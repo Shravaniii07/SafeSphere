@@ -23,6 +23,7 @@ export const sendEmail = async (to, subject, text) => {
         await transporter.sendMail(mailOptions);
     } catch (error) {
         console.error("Email Error:", error.message);
+        throw new Error("Invalid or unreachable email address");
     }
 };
 
@@ -87,6 +88,7 @@ export const sendEmergencyAlertEmail = async (contacts, user, details = {}) => {
 export const sendTripTrackingEmail = async (contacts, user, trip) => {
     const subject = `📍 SafeSphere: ${user.name} has started a trip`;
     const trackingLink = `${process.env.BASE_URL}/api/trip/track/${trip.trackingId}`;
+    const startLocationLink = `https://www.google.com/maps?q=${trip.startLocation.lat},${trip.startLocation.lng}`;
 
     const message = `
     📍 TRIP STARTED 📍
@@ -99,10 +101,86 @@ export const sendTripTrackingEmail = async (contacts, user, trip) => {
     Trip Details:
     - Destination: ${trip.destination}
     
+    Start Location:
+    ${startLocationLink}
+
     You can track their real-time location here:
     ${trackingLink}
 
     Please keep an eye on their progress.
+
+    Stay Informed,
+    SafeSphere Application
+    `;
+
+    for (const contact of contacts) {
+        if (contact.email) {
+            await sendEmail(contact.email, subject, message);
+        }
+    }
+};
+
+// Send Trip Update Email
+export const sendTripUpdateEmail = async (contacts, user, trip) => {
+    const subject = `🔄 SafeSphere: ${user.name} updated their destination`;
+    const trackingLink = `${process.env.BASE_URL}/api/trip/track/${trip.trackingId}`;
+    
+    // Safety check for location
+    const lat = trip.currentLocation?.lat || trip.startLocation?.lat;
+    const lng = trip.currentLocation?.lng || trip.startLocation?.lng;
+    const locationLink = `https://www.google.com/maps?q=${lat},${lng}`;
+
+    const message = `
+    🔄 DESTINATION UPDATED 🔄
+
+    This is an automated notification from SafeSphere.
+    
+    User details:
+    - Name: ${user.name}
+    
+    Updated Trip Details:
+    - New Destination: ${trip.destination}
+    
+    Current Location:
+    ${locationLink}
+
+    You can continue to track their real-time location here:
+    ${trackingLink}
+
+    Stay Informed,
+    SafeSphere Application
+    `;
+
+    for (const contact of contacts) {
+        if (contact.email) {
+            await sendEmail(contact.email, subject, message);
+        }
+    }
+};
+
+// Send Trip Completion Email
+export const sendTripCompleteEmail = async (contacts, user, trip) => {
+    const subject = `✅ SafeSphere: ${user.name} arrived safely`;
+    
+    // Safety check for location
+    const lat = trip.currentLocation?.lat || trip.startLocation?.lat;
+    const lng = trip.currentLocation?.lng || trip.startLocation?.lng;
+    const locationLink = `https://www.google.com/maps?q=${lat},${lng}`;
+
+    const message = `
+    ✅ TRIP COMPLETED ✅
+
+    This is an automated notification from SafeSphere.
+    
+    User details:
+    - Name: ${user.name}
+    
+    ${user.name} has marked their trip to ${trip.destination} as completed.
+    
+    Final Recorded Location:
+    ${locationLink}
+
+    Thank you for using SafeSphere to stay connected.
 
     Stay Informed,
     SafeSphere Application
