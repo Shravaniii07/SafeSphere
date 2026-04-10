@@ -3,6 +3,10 @@ import dotenv from "dotenv";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import http from "http";
+import path from "path";
+import { fileURLToPath } from "url";
+import helmet from "helmet";
+import compression from "compression";
 import { Server } from "socket.io";
 import connectDB from "./config/db.js";
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
@@ -23,6 +27,10 @@ import adminRoutes from "./routes/adminRoutes.js";
 import incidentRoutes from "./routes/incidentRoutes.js";
 import seedAdmin from "./config/adminSeed.js";
 
+// ES Module path fix
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 // Initialize App & Environment
 dotenv.config();
 connectDB().then(() => {
@@ -30,21 +38,29 @@ connectDB().then(() => {
 });
 
 const app = express();
+
+// ✅ PRODUCTION MIDDLEWARE
+app.use(helmet({
+    contentSecurityPolicy: false, // Set to false if you have trouble with Leaflet/External maps
+}));
+app.use(compression());
+
 const server = http.createServer(app);
 
-// ✅ SOCKET.IO (FIXED)
+// ✅ SOCKET.IO (DYNAMIC ORIGIN)
 const io = new Server(server, {
     cors: {
-        origin: ["http://localhost:5173", "http://localhost:5174"],
+        origin: [process.env.FRONTEND_URL, "http://localhost:5173", "http://localhost:5174"].filter(Boolean),
         credentials: true,
     },
 });
 
-// ✅ CORS (ONLY ONCE)
+// ✅ CORS (DYNAMIC ORIGIN)
 app.use(cors({
-    origin: ["http://localhost:5173", "http://localhost:5174"],
+    origin: [process.env.FRONTEND_URL, "http://localhost:5173", "http://localhost:5174"].filter(Boolean),
     credentials: true,
 }));
+
 
 // Middleware
 app.use(express.json());
@@ -80,9 +96,24 @@ app.use("/api/reports", reportRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/incidents", incidentRoutes);
 
+// --- STATIC FILES FOR PRODUCTION ---
+if (process.env.NODE_ENV === "production") {
+    const frontendPath = path.join(__dirname, "../frontend/dist");
+    app.use(express.static(frontendPath));
+
+    app.use((req, res, next) => {
+        if (!req.path.startsWith("/api")) {
+            res.sendFile(path.resolve(frontendPath, "index.html"));
+        } else {
+            next();
+        }
+    });
+}
+
+
 // --- ERROR HANDLING ---
 app.use(notFound);
-app.use(errorHandler);
+app.use(errorHandler); // Trigger nodemon restart
 
 // --- START SERVER ---
 const PORT = process.env.PORT || 5000;
