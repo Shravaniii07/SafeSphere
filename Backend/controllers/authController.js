@@ -7,7 +7,7 @@ import { registerSchema, loginSchema } from "../utils/validation.js";
 // Helper function to generate token and set cookie
 const generateToken = (res, userId) => {
     const token = jwt.sign({ id: userId }, process.env.JWT_SECRET, {
-        expiresIn: "30d"
+        expiresIn: "1d"
     });
 
     res.cookie("jwt", token, {
