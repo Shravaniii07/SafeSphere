@@ -1,47 +1,61 @@
 import nodemailer from "nodemailer";
+import { google } from "googleapis";
 import dotenv from "dotenv";
-import dns from "dns";
 
 dotenv.config();
 
-dns.setDefaultResultOrder("ipv4first");
+// 🔐 OAuth2 Setup
+const oAuth2Client = new google.auth.OAuth2(
+    process.env.CLIENT_ID,
+    process.env.CLIENT_SECRET,
+    "https://developers.google.com/oauthplayground"
+);
 
-const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
-    family: 4,
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
+// 🔁 Set Refresh Token
+oAuth2Client.setCredentials({
+    refresh_token: process.env.REFRESH_TOKEN,
 });
 
-// ✅ OPTIONAL: VERIFY FUNCTION (call manually if needed)
-export const verifyEmailServer = async () => {
+// ✅ Create Transporter dynamically
+const createTransporter = async () => {
     try {
-        await transporter.verify();
-        console.log("✅ Mail Server is ready to send emails");
+        const accessToken = await oAuth2Client.getAccessToken();
+
+        return nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+                type: "OAuth2",
+                user: process.env.EMAIL_USER,
+                clientId: process.env.CLIENT_ID,
+                clientSecret: process.env.CLIENT_SECRET,
+                refreshToken: process.env.REFRESH_TOKEN,
+                accessToken: accessToken.token,
+            },
+        });
     } catch (error) {
-        console.error("🚨 Mail Transporter Error:", error);
+        console.error("🚨 Error creating transporter:", error);
+        throw error;
     }
 };
 
 // ✅ GENERIC EMAIL FUNCTION
 export const sendEmail = async (to, subject, text) => {
-    const mailOptions = {
-        from: `"SafeSphere" <${process.env.EMAIL_USER}>`,
-        to,
-        subject,
-        text,
-    };
-
     try {
+        const transporter = await createTransporter();
+
+        const mailOptions = {
+            from: `"SafeSphere" <${process.env.EMAIL_USER}>`,
+            to,
+            subject,
+            text,
+        };
+
         const info = await transporter.sendMail(mailOptions);
         console.log("📧 Email sent:", info.response);
+
     } catch (error) {
-        console.error("🚨 Email Full Error:", error);
-        throw error; // ✅ Don't mask real error
+        console.error("🚨 Email Error:", error);
+        throw error;
     }
 };
 
@@ -115,22 +129,16 @@ export const sendTripTrackingEmail = async (contacts, user, trip) => {
     const message = `
 📍 TRIP STARTED 📍
 
-This is an automated notification from SafeSphere.
-
-User details:
-- Name: ${user.name}
-
-Trip Details:
-- Destination: ${trip.destination}
+User: ${user.name}
+Destination: ${trip.destination}
 
 Start Location:
 ${startLocationLink}
 
-Track real-time location:
+Track here:
 ${trackingLink}
 
-Stay Informed,
-SafeSphere Application
+SafeSphere
 `;
 
     for (const contact of contacts) {
@@ -189,8 +197,6 @@ ${user.name} has safely reached ${trip.destination}.
 
 Final Location:
 ${locationLink}
-
-Thank you for using SafeSphere.
 
 Stay Safe,
 SafeSphere Team
