@@ -1,21 +1,20 @@
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
+import dns from "dns";
 
 dotenv.config();
 
-// ✅ CREATE TRANSPORTER (GMAIL - FIXED FOR RENDER)
+dns.setDefaultResultOrder("ipv4first");
+
 const transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
-    port: 465, // ✅ Use SSL port
-    secure: true, // ✅ MUST be true for 465
+    port: 465,
+    secure: true,
+    family: 4,
     auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS, // ✅ Gmail App Password (NOT normal password)
+        pass: process.env.EMAIL_PASS,
     },
-    family: 4, // ✅ Force IPv4 (fix ENETUNREACH error)
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 10000,
 });
 
 // ✅ OPTIONAL: VERIFY FUNCTION (call manually if needed)
