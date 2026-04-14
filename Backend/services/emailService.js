@@ -5,12 +5,18 @@ dotenv.config();
 
 const transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
-    port: 587,
-    secure: false,
+    port: 465,
+    secure: true,
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
     },
+    tls: {
+        rejectUnauthorized: false
+    },
+    connectionTimeout: 15000, // 15s
+    greetingTimeout: 15000,
+    family: 4 // Force IPv4 to avoid ENETUNREACH on IPv6
 });
 
 export const sendEmail = async (to, subject, text) => {
@@ -49,7 +55,7 @@ export const sendOTPEmail = async (email, otp) => {
 export const sendEmergencyAlertEmail = async (contacts, user, details = {}) => {
     const { trip, location, type = "General Emergency" } = details;
     const subject = `🚨 SafeSphere Alert: ${type} for ${user.name}`;
-    
+
     let locationLink = "Location not provided";
     if (trip && trip.currentLocation) {
         locationLink = `https://www.google.com/maps?q=${trip.currentLocation.lat},${trip.currentLocation.lng}`;
@@ -126,7 +132,7 @@ export const sendTripTrackingEmail = async (contacts, user, trip) => {
 export const sendTripUpdateEmail = async (contacts, user, trip) => {
     const subject = `🔄 SafeSphere: ${user.name} updated their destination`;
     const trackingLink = `${process.env.FRONTEND_URL}/track/${trip.trackingId}`;
-    
+
     // Safety check for location
     const lat = trip.currentLocation?.lat || trip.startLocation?.lat;
     const lng = trip.currentLocation?.lng || trip.startLocation?.lng;
@@ -163,7 +169,7 @@ export const sendTripUpdateEmail = async (contacts, user, trip) => {
 // Send Trip Completion Email
 export const sendTripCompleteEmail = async (contacts, user, trip) => {
     const subject = `✅ SafeSphere: ${user.name} arrived safely`;
-    
+
     // Safety check for location
     const lat = trip.currentLocation?.lat || trip.startLocation?.lat;
     const lng = trip.currentLocation?.lng || trip.startLocation?.lng;
