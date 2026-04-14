@@ -1,4 +1,3 @@
-import nodemailer from "nodemailer";
 import { google } from "googleapis";
 import dotenv from "dotenv";
 
@@ -11,50 +10,40 @@ const oAuth2Client = new google.auth.OAuth2(
     "https://developers.google.com/oauthplayground"
 );
 
-// 🔁 Set Refresh Token
 oAuth2Client.setCredentials({
     refresh_token: process.env.REFRESH_TOKEN,
 });
 
-// ✅ Create Transporter dynamically
-const createTransporter = async () => {
-    try {
-        const accessToken = await oAuth2Client.getAccessToken();
-
-        return nodemailer.createTransport({
-            service: "gmail",
-            auth: {
-                type: "OAuth2",
-                user: process.env.EMAIL_USER,
-                clientId: process.env.CLIENT_ID,
-                clientSecret: process.env.CLIENT_SECRET,
-                refreshToken: process.env.REFRESH_TOKEN,
-                accessToken: accessToken.token,
-            },
-        });
-    } catch (error) {
-        console.error("🚨 Error creating transporter:", error);
-        throw error;
-    }
-};
-
-// ✅ GENERIC EMAIL FUNCTION
+// ✅ SEND EMAIL USING GMAIL API (NO SMTP)
 export const sendEmail = async (to, subject, text) => {
     try {
-        const transporter = await createTransporter();
+        const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
 
-        const mailOptions = {
-            from: `"SafeSphere" <${process.env.EMAIL_USER}>`,
-            to,
-            subject,
+        const message = [
+            `From: SafeSphere <${process.env.EMAIL_USER}>`,
+            `To: ${to}`,
+            `Subject: ${subject}`,
+            "",
             text,
-        };
+        ].join("\n");
 
-        const info = await transporter.sendMail(mailOptions);
-        console.log("📧 Email sent:", info.response);
+        const encodedMessage = Buffer.from(message)
+            .toString("base64")
+            .replace(/\+/g, "-")
+            .replace(/\//g, "_")
+            .replace(/=+$/, "");
+
+        const res = await gmail.users.messages.send({
+            userId: "me",
+            requestBody: {
+                raw: encodedMessage,
+            },
+        });
+
+        console.log("📧 Email sent:", res.data.id);
 
     } catch (error) {
-        console.error("🚨 Email Error:", error);
+        console.error("🚨 Gmail API Error:", error);
         throw error;
     }
 };
