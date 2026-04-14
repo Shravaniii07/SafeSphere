@@ -14,9 +14,20 @@ const transporter = nodemailer.createTransport({
     tls: {
         rejectUnauthorized: false
     },
-    connectionTimeout: 15000, // 15s
-    greetingTimeout: 15000,
-    family: 4 // Force IPv4 to avoid ENETUNREACH on IPv6
+    connectionTimeout: 30000, // 30s
+    greetingTimeout: 30000,
+    family: 4,
+    logger: true,
+    debug: true
+});
+
+// ✅ TEST CONNECTION ON STARTUP
+transporter.verify((error, success) => {
+    if (error) {
+        console.error("🚨 Mail Transporter Verification Error:", error.message);
+    } else {
+        console.log("✅ Mail Server is ready to take messages");
+    }
 });
 
 export const sendEmail = async (to, subject, text) => {
