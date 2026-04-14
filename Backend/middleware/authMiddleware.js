@@ -14,10 +14,12 @@ export const protect = async (req, res, next) => {
 
             next();
         } catch (error) {
-            res.status(401).json({ message: "Not authorized, token failed" });
+            console.error(`[Auth Middleware] JWT verification failed: ${error.message}`);
+            res.status(401).json({ success: false, message: "Not authorized, token failed" });
         }
     } else {
-        res.status(401).json({ message: "Not authorized, no token" });
+        console.warn("[Auth Middleware] No JWT cookie found in request");
+        res.status(401).json({ success: false, message: "Not authorized, no token" });
     }
 };
 

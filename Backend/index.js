@@ -50,24 +50,36 @@ app.use(compression());
 
 const server = http.createServer(app);
 
+// ✅ NORMALIZE FRONTEND_URL (Remove trailing slash if any)
+const normalizedFrontendUrl = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, "") : "";
+
 // ✅ SOCKET.IO (DYNAMIC ORIGIN)
 const io = new Server(server, {
     cors: {
-        origin: [process.env.FRONTEND_URL, "http://localhost:5173", "http://localhost:5174"].filter(Boolean),
+        origin: [normalizedFrontendUrl, "http://localhost:5173", "http://localhost:5174"].filter(Boolean),
         credentials: true,
     },
 });
 
 // ✅ CORS (DYNAMIC ORIGIN)
 app.use(cors({
-    origin: [process.env.FRONTEND_URL, "http://localhost:5173", "http://localhost:5174"].filter(Boolean),
+    origin: [normalizedFrontendUrl, "http://localhost:5173", "http://localhost:5174"].filter(Boolean),
     credentials: true,
 }));
-
 
 // Middleware
 app.use(express.json());
 app.use(cookieParser());
+
+// ✅ COOKIE DEBUG LOG (Remove after testing)
+if (process.env.NODE_ENV === "production") {
+    app.use((req, res, next) => {
+        if (req.path.startsWith("/api") && !req.path.includes("/auth")) {
+            console.log(`[Cookie Debug] Path: ${req.path} | JWT Cookie Present: ${!!req.cookies.jwt}`);
+        }
+        next();
+    });
+}
 
 // ✅ Make io available in routes
 app.use((req, res, next) => {
