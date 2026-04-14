@@ -34,7 +34,10 @@ export function AuthProvider({ children }) {
     try {
       const res = await api.get('/api/user/profile')
       const data = res.data
-      const userData = { _id: data._id, name: data.name, email: data.email, initials: data.initials }
+      const userData = { 
+        ...data,
+        initials: data.initials || data.name?.charAt(0) || 'U'
+      }
       setAuthState(prev => ({ ...prev, user: userData, role: data.role || 'user', isAuthenticated: true }))
       return data
     } catch (err) {

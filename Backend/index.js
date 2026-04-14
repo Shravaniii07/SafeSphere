@@ -39,6 +39,9 @@ connectDB().then(() => {
 
 const app = express();
 
+// ✅ TRUST PROXY FOR RENDER/HEROKU (Essential for Cookies)
+app.set("trust proxy", 1);
+
 // ✅ PRODUCTION MIDDLEWARE
 app.use(helmet({
     contentSecurityPolicy: false, // Set to false if you have trouble with Leaflet/External maps
@@ -122,3 +125,4 @@ const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+ 

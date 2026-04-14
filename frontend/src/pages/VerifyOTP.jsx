@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { MapPin, Shield, ArrowRight, KeyRound } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import toast from 'react-hot-toast'
+import api from '../api/api'
 
 export default function VerifyOTP() {
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
@@ -62,14 +63,12 @@ export default function VerifyOTP() {
       // Sync pending contacts if any (from registration)
       const pendingContacts = JSON.parse(localStorage.getItem('safesphere_emergency_contacts') || '[]')
       if (pendingContacts.length > 0) {
-        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
         for (const contact of pendingContacts) {
           try {
-            await fetch(`${API_URL}/api/user/contacts`, {
-              method: "POST",
-              credentials: 'include',
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ name: contact.name, phone: contact.phone, email: contact.email || '' }),
+            await api.post('/api/user/contacts', {
+              name: contact.name,
+              phone: contact.phone,
+              email: contact.email || ''
             })
           } catch (e) {
             console.error("Failed to sync contact:", contact.name)

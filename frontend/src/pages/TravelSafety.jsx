@@ -70,11 +70,25 @@ export default function TravelSafety() {
         const activeRes = await api.get('/api/trip/active')
         if (activeRes.data.success && activeRes.data.data) {
           const active = activeRes.data.data
+          let distance = '...'
+          let remainingMinutes = '...'
+
+          if (active.destinationLocation && active.currentLocation) {
+            const distKm = haversine(
+              active.currentLocation.lat,
+              active.currentLocation.lng,
+              active.destinationLocation.lat,
+              active.destinationLocation.lng
+            )
+            distance = distKm.toFixed(1)
+            remainingMinutes = Math.max(0, Math.round((new Date(active.eta).getTime() - Date.now()) / 60000))
+          }
+
           setTripData({
             from: 'Your starting point',
             to: active.destination,
-            distance: '...',
-            eta: '...',
+            distance: distance,
+            eta: remainingMinutes,
             startTime: new Date(active.createdAt).getTime(),
             trackingId: active.trackingId,
             autoShare: active.autoShare,
@@ -185,6 +199,8 @@ export default function TravelSafety() {
         eta: etaMinutes,
         lat: fromCoords.lat,
         lng: fromCoords.lng,
+        destLat: toCoords.lat,
+        destLng: toCoords.lng,
         autoShare: autoShare
       })
 
@@ -240,6 +256,8 @@ export default function TravelSafety() {
       const res = await api.post('/api/trip/update-destination', {
         destination: toGeo?.name || newDestination,
         eta: etaMinutes,
+        destLat: toCoords?.lat,
+        destLng: toCoords?.lng,
         autoShare: autoShare
       })
 

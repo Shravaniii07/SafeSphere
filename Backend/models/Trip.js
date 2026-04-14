@@ -12,6 +12,11 @@ const tripSchema = new mongoose.Schema({
         lat: Number,
         lng: Number,
     },
+    
+    destinationLocation: {
+        lat: Number,
+        lng: Number,
+    },
 
     currentLocation: {
         lat: Number,

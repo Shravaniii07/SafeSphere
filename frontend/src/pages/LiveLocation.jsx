@@ -54,11 +54,15 @@ export default function LiveLocation() {
             ? getDistance(latitude, longitude, lastSentPosition.current.lat, lastSentPosition.current.lng)
             : Infinity;
 
-          if (distance > 10) { // Only send if moved more than 10 meters
+          const timeSinceLastUpdate = lastSentPosition.current 
+            ? Date.now() - lastSentPosition.current.time 
+            : Infinity;
+
+          if (distance > 2 || timeSinceLastUpdate > 5000) { // Send if moved > 2m or 5s passed
             // 1. Update general user location
             api.post('/api/location/update', { latitude, longitude })
               .then(() => {
-                lastSentPosition.current = { lat: latitude, lng: longitude };
+                lastSentPosition.current = { lat: latitude, lng: longitude, time: Date.now() };
               })
               .catch(err => console.error("Location sync error:", err))
 
@@ -77,6 +81,25 @@ export default function LiveLocation() {
 
     return () => navigator.geolocation.clearWatch(id)
   }, [])
+
+  // Forced sync interval (every 5s)
+  useEffect(() => {
+    if (!sharing) return;
+
+    const interval = setInterval(() => {
+      if (navigator.geolocation && sharing) {
+        navigator.geolocation.getCurrentPosition((pos) => {
+          const { latitude, longitude } = pos.coords;
+          if (activeTrackingId) {
+            api.post(`/api/tracking/update/${activeTrackingId}`, { lat: latitude, lng: longitude })
+              .catch(err => console.error("Force sync error:", err))
+          }
+        }, null, { enableHighAccuracy: true });
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [sharing, activeTrackingId]);
 
   // Reverse geocode to get address
   useEffect(() => {

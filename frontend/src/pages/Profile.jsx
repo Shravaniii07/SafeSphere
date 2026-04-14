@@ -22,10 +22,10 @@ export default function Profile() {
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm({
     resolver: zodResolver(profileSchema),
-    defaultValues: { 
-      name: appUser?.name || '', 
-      email: appUser?.email || '', 
-      phone: appUser?.phone || '' 
+    defaultValues: {
+      name: appUser?.name || '',
+      email: appUser?.email || '',
+      phone: appUser?.phone || ''
     },
   })
 
@@ -52,14 +52,11 @@ export default function Profile() {
     }
   }
 
-  const toggleSetting = (key) => {
-    setSettings(prev => ({ ...prev, [key]: !prev[key] }))
-  }
 
   const handleDeleteAccount = async () => {
     const confirm1 = window.confirm("Are you ABSOLUTELY sure? This will permanently delete your account and all associated safety data.")
     if (!confirm1) return
-    
+
     const confirm2 = window.confirm("Final warning: This action is IRREVERSIBLE. Do you want to proceed?")
     if (!confirm2) return
 
@@ -89,8 +86,8 @@ export default function Profile() {
         <p className="text-gray-400 text-sm">Manage your account and preferences</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-8">
+      <div className="max-w-4xl mx-auto">
+        <div>
           <Card>
             <CardBody>
               <div className="flex items-center gap-6 mb-8">
@@ -110,7 +107,6 @@ export default function Profile() {
                   <p className="text-gray-400 text-sm flex items-center gap-1.5 mt-0.5"><Mail className="w-3.5 h-3.5" /> {appUser.email}</p>
                   <div className="mt-2 flex items-center gap-2">
                     <Badge variant="success" dot>Verified</Badge>
-                    <Badge variant="info">Free Plan</Badge>
                   </div>
                 </div>
               </div>
@@ -136,7 +132,7 @@ export default function Profile() {
                       <Shield className="w-4 h-4 text-secondary" /> Emergency Contacts
                     </h4>
                   </div>
-                  
+
                   <div className="space-y-4">
                     {appUser.emergencyContacts?.length > 0 ? (
                       appUser.emergencyContacts.map((contact, idx) => (
@@ -158,7 +154,7 @@ export default function Profile() {
                     ) : (
                       <div className="text-center py-8 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
                         <p className="text-sm text-slate-400">No emergency contacts added yet.</p>
-                        <Button variant="ghost" size="sm" className="mt-2 text-secondary" onClick={() => window.location.href='/emergency-info'}>Add Contact</Button>
+                        <Button variant="ghost" size="sm" className="mt-2 text-secondary" onClick={() => window.location.href = '/emergency-info'}>Add Contact</Button>
                       </div>
                     )}
                   </div>
@@ -168,41 +164,6 @@ export default function Profile() {
           </Card>
         </div>
 
-        <div className="lg:col-span-4 space-y-5">
-          <Card>
-            <CardHeader><h3 className="text-[15px] font-semibold text-gray-900">Preferences</h3></CardHeader>
-            <CardBody>
-              <div className="space-y-5">
-                <Toggle label="Dark Mode" description="Switch to dark theme" checked={settings.darkMode} onChange={() => toggleSetting('darkMode')} />
-                <Toggle label="Push Notifications" description="Receive alerts on phone" checked={settings.pushNotifications} onChange={() => toggleSetting('pushNotifications')} />
-                <Toggle label="Location Services" description="Allow GPS tracking" checked={settings.locationServices} onChange={() => toggleSetting('locationServices')} />
-                <Toggle label="Sound Alerts" description="Play sound on SOS" checked={settings.soundAlerts} onChange={() => toggleSetting('soundAlerts')} />
-              </div>
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardBody>
-              <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <Shield className="w-4 h-4 text-blue-500" /> Account Security
-              </h4>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between py-2">
-                  <span className="text-sm text-gray-500">Two-factor auth</span>
-                  <Badge variant="warning">Not set</Badge>
-                </div>
-                <div className="flex items-center justify-between py-2">
-                  <span className="text-sm text-gray-500">Last login</span>
-                  <span className="text-sm font-semibold text-gray-900">Just now</span>
-                </div>
-                <div className="flex items-center justify-between py-2">
-                  <span className="text-sm text-gray-500">Account status</span>
-                  <Badge variant="success" dot>Active</Badge>
-                </div>
-              </div>
-            </CardBody>
-          </Card>
-        </div>
       </div>
 
       {/* Danger Zone */}
@@ -223,15 +184,15 @@ export default function Profile() {
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                   onClick={handleLogout}
                 >
                   <LogOut className="w-4 h-4 mr-2" /> Logout Only
                 </Button>
-                <Button 
-                  variant="danger" 
+                <Button
+                  variant="danger"
                   onClick={handleDeleteAccount}
                   isLoading={isDeleting}
                 >
@@ -242,6 +203,6 @@ export default function Profile() {
           </CardBody>
         </Card>
       </div>
-    </div>
+    </div >
   )
 }

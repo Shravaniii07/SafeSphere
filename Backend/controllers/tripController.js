@@ -15,7 +15,7 @@ export const startTrip = async (req, res) => {
 
         res.status(201).json({
             success: true,
-            trackingLink: `${process.env.BASE_URL}/api/trip/track/${trip.trackingId}`,
+            trackingLink: `${process.env.FRONTEND_URL}/track/${trip.trackingId}`,
             data: trip,
         });
     } catch (error) {
@@ -52,10 +52,13 @@ export const getActiveTrip = async (req, res) => {
 // UPDATE DESTINATION
 export const updateDestination = async (req, res) => {
     try {
-        const { destination, eta, autoShare } = req.body;
+        const { destination, eta, autoShare, destLat, destLng } = req.body;
         
         const updateData = { destination };
         if (autoShare !== undefined) updateData.autoShare = autoShare;
+        if (destLat !== undefined && destLng !== undefined) {
+            updateData.destinationLocation = { lat: destLat, lng: destLng };
+        }
         
         // If ETA is provided, recalculate the expiry date from now
         if (eta) {

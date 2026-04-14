@@ -54,6 +54,7 @@ export default function App() {
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/admin/login" element={<AdminLogin />} />
             </Route>
+            <Route path="/track/:trackingId" element={<Tracking />} />
 
             {/* Protected Routes — any authenticated user */}
             <Route element={<ProtectedRoute />}>

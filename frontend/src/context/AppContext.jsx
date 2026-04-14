@@ -72,9 +72,7 @@ export function AppProvider({ children }) {
     if (authUser) {
       setUser(prev => ({
         ...prev,
-        name: authUser.name || prev.name,
-        initials: authUser.initials || prev.initials,
-        email: authUser.email || prev.email,
+        ...authUser,
         isAdmin: role === 'admin',
       }))
       fetchNotifs()

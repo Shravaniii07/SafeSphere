@@ -1,16 +1,20 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Bell, AlertTriangle, Menu, Command, LogOut } from 'lucide-react'
+import { Search, Bell, AlertTriangle, Menu, Command, LogOut, Sun, Moon } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import toast from 'react-hot-toast'
 
 export default function Navbar({ title, onBurgerClick }) {
-  const { user, setSearchLocation } = useApp()
+  const { user, setSearchLocation, settings, setSettings } = useApp()
   const { logout, role } = useAuth()
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [isSearching, setIsSearching] = useState(false)
+
+  const toggleDarkMode = () => {
+    setSettings(prev => ({ ...prev, darkMode: !prev.darkMode }))
+  }
 
   // Keyword mapping for direct page navigation
   const SEARCH_KEYWORDS = {
@@ -127,6 +131,11 @@ export default function Navbar({ title, onBurgerClick }) {
             <AlertTriangle className="w-4 h-4" /><span className="hidden sm:inline">SOS</span>
           </button>
         )}
+
+        {/* Dark Mode Toggle */}
+        <button onClick={toggleDarkMode} className="w-10 h-10 rounded-xl flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-all duration-300 cursor-pointer" aria-label="Toggle Dark Mode" title={settings.darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}>
+          {settings.darkMode ? <Sun className="w-[18px] h-[18px]" /> : <Moon className="w-[18px] h-[18px]" />}
+        </button>
 
         {/* Logout */}
         <button onClick={handleLogout} className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:bg-accent-50 hover:text-accent transition-all duration-200 cursor-pointer min-h-[44px] min-w-[44px]" aria-label="Logout" title="Logout">

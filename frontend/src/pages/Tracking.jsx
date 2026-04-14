@@ -112,7 +112,8 @@ export default function Tracking() {
   }
 
   return (
-    <div className="max-w-[700px] mx-auto stagger-children">
+    <div className="min-h-screen bg-slate-50 py-8 px-4">
+      <div className="max-w-[700px] mx-auto stagger-children">
       <div className="text-center mb-8">
         <div className="flex items-center justify-center gap-2.5 mb-5">
           <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary to-primary-light flex items-center justify-center shadow-lg">
@@ -198,6 +199,7 @@ export default function Tracking() {
           </>
         )}
         <div className="flex items-center gap-1.5 text-sm text-slate-500"><Shield className="w-3.5 h-3.5" /> E2E Encrypted</div>
+      </div>
       </div>
     </div>
   )

@@ -87,7 +87,7 @@ export const sendEmergencyAlertEmail = async (contacts, user, details = {}) => {
 // Send Trip Tracking Email
 export const sendTripTrackingEmail = async (contacts, user, trip) => {
     const subject = `📍 SafeSphere: ${user.name} has started a trip`;
-    const trackingLink = `${process.env.BASE_URL}/api/trip/track/${trip.trackingId}`;
+    const trackingLink = `${process.env.FRONTEND_URL}/track/${trip.trackingId}`;
     const startLocationLink = `https://www.google.com/maps?q=${trip.startLocation.lat},${trip.startLocation.lng}`;
 
     const message = `
@@ -123,7 +123,7 @@ export const sendTripTrackingEmail = async (contacts, user, trip) => {
 // Send Trip Update Email
 export const sendTripUpdateEmail = async (contacts, user, trip) => {
     const subject = `🔄 SafeSphere: ${user.name} updated their destination`;
-    const trackingLink = `${process.env.BASE_URL}/api/trip/track/${trip.trackingId}`;
+    const trackingLink = `${process.env.FRONTEND_URL}/track/${trip.trackingId}`;
     
     // Safety check for location
     const lat = trip.currentLocation?.lat || trip.startLocation?.lat;
