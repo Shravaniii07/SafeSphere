@@ -56,7 +56,7 @@ export const sendOTPEmail = async (email, otp) => {
 Hello,
 
 Your OTP verification code for SafeSphere is: ${otp}.
-It will expire in 10 minutes.
+It will expire in 1 minute.
 
 If you did not request this code, please ignore this email.
 
