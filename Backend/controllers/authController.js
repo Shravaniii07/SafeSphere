@@ -10,11 +10,14 @@ const generateToken = (res, userId) => {
         expiresIn: "1d"
     });
 
+    const isProduction = process.env.NODE_ENV === "production";
+
     res.cookie("jwt", token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production", // Must be true for cross-site
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "strict", // Must be 'none' for cross-site
-        maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+        secure: isProduction, // Must be true for SameSite=None
+        sameSite: isProduction ? "none" : "lax", // 'none' is required for cross-site on Render
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        path: "/",
     });
 };
 
@@ -77,14 +80,14 @@ export const loginUser = async (req, res) => {
         // ✅ Bypass OTP for Root Admin for smooth dev experience
         if (user.role === 'admin' && user.email === 'admin@safesphere.com') {
             generateToken(res, user._id);
-            return res.json({ 
-                success: true, 
-                otpRequired: false, 
-                _id: user._id, 
-                name: user.name, 
-                email: user.email, 
+            return res.json({
+                success: true,
+                otpRequired: false,
+                _id: user._id,
+                name: user.name,
+                email: user.email,
                 role: user.role,
-                message: "Admin access granted!" 
+                message: "Admin access granted!"
             });
         }
 
@@ -97,10 +100,10 @@ export const loginUser = async (req, res) => {
 
         try {
             await sendOTPEmail(email, otp);
-            res.json({ 
+            res.json({
                 success: true,
-                otpRequired: true, 
-                message: "OTP sent to email. Please verify to login." 
+                otpRequired: true,
+                message: "OTP sent to email. Please verify to login."
             });
         } catch (error) {
             res.status(400).json({ success: false, message: "Failed to send OTP to this email." });
@@ -154,10 +157,10 @@ export const resendOTP = async (req, res) => {
 
         try {
             await sendOTPEmail(email, otp);
-            res.json({ 
+            res.json({
                 success: true,
                 otpRequired: true,
-                message: "OTP resent successfully." 
+                message: "OTP resent successfully."
             });
         } catch (error) {
             res.status(400).json({ message: "Failed to send OTP to this email." });
@@ -169,11 +172,13 @@ export const resendOTP = async (req, res) => {
 
 // LOGOUT
 export const logoutUser = (req, res) => {
+    const isProduction = process.env.NODE_ENV === "production";
     res.cookie("jwt", "", {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
-        expires: new Date(0)
+        secure: isProduction,
+        sameSite: isProduction ? "none" : "lax",
+        expires: new Date(0),
+        path: "/",
     });
     res.status(200).json({ message: "Logged out successfully" });
 };
