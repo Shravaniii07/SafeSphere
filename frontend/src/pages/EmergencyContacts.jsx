@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Phone, Search, Download, MapPin, Heart, Shield, Flame, Brain,
   Ambulance, ChevronRight, Building2, AlertTriangle, PhoneCall, Plus, X
@@ -6,7 +6,7 @@ import {
 import { Card, CardBody, Badge, Button } from '../components/UI'
 import toast from 'react-hot-toast'
 import api from '../api/api'
-import { useEffect } from 'react'
+import { useAuth } from '../context/AuthContext'
 
 const categories = [
   {
@@ -81,6 +81,7 @@ const cityContacts = {
 }
 
 export default function EmergencyContacts() {
+  const { refreshProfile } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCity, setSelectedCity] = useState('Pune')
   const [activeCategory, setActiveCategory] = useState(null)
@@ -114,6 +115,7 @@ export default function EmergencyContacts() {
       toast.success('Contact added!')
       setNewContact({ name: '', phone: '', email: '' })
       fetchPersonalContacts()
+      refreshProfile() // Update global user state
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to add contact')
     }
@@ -125,6 +127,7 @@ export default function EmergencyContacts() {
       await api.delete(`/api/user/contacts/${id}`)
       toast.success('Contact removed')
       fetchPersonalContacts()
+      refreshProfile() // Update global user state
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to remove contact')
     }
@@ -184,11 +187,11 @@ export default function EmergencyContacts() {
               <p className="text-sm text-slate-400 italic">No personal contacts added yet.</p>
             )}
           </div>
-          
+
           <form onSubmit={handleAddContact} className="flex flex-wrap gap-3 p-4 bg-white/50 rounded-xl border border-dashed border-secondary/30">
-            <input type="text" placeholder="Name" required value={newContact.name} onChange={e => setNewContact({...newContact, name: e.target.value})} className="px-3 py-2 text-sm border border-slate-200 rounded-lg flex-1 min-w-[150px]" />
-            <input type="text" placeholder="Phone" required value={newContact.phone} onChange={e => setNewContact({...newContact, phone: e.target.value})} className="px-3 py-2 text-sm border border-slate-200 rounded-lg flex-1 min-w-[150px]" />
-            <input type="email" placeholder="Email (Optional)" value={newContact.email} onChange={e => setNewContact({...newContact, email: e.target.value})} className="px-3 py-2 text-sm border border-slate-200 rounded-lg flex-1 min-w-[120px]" />
+            <input type="text" placeholder="Name" required value={newContact.name} onChange={e => setNewContact({ ...newContact, name: e.target.value })} className="px-3 py-2 text-sm border border-slate-200 rounded-lg flex-1 min-w-[150px]" />
+            <input type="text" placeholder="Phone" required value={newContact.phone} onChange={e => setNewContact({ ...newContact, phone: e.target.value })} className="px-3 py-2 text-sm border border-slate-200 rounded-lg flex-1 min-w-[150px]" />
+            <input type="email" placeholder="Email (Required)" value={newContact.email} onChange={e => setNewContact({ ...newContact, email: e.target.value })} className="px-3 py-2 text-sm border border-slate-200 rounded-lg flex-1 min-w-[120px]" />
             <Button type="submit" size="sm" variant="secondary"><Plus className="w-4 h-4" /> Add</Button>
           </form>
         </CardBody>
@@ -221,11 +224,10 @@ export default function EmergencyContacts() {
           <button
             key={cat.id}
             onClick={() => setActiveCategory(activeCategory === cat.id ? null : cat.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border transition-all duration-200 cursor-pointer whitespace-nowrap min-h-[40px] ${
-              activeCategory === cat.id
+            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border transition-all duration-200 cursor-pointer whitespace-nowrap min-h-[40px] ${activeCategory === cat.id
                 ? 'bg-primary text-white border-primary shadow-[0_2px_8px_rgba(15,23,42,0.2)]'
                 : 'bg-white text-slate-500 border-slate-200 hover:border-primary hover:text-primary'
-            }`}
+              }`}
           >
             <cat.icon className="w-4 h-4" />
             {cat.label}

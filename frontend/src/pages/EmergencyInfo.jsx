@@ -6,6 +6,7 @@ import { Trash2, UserPlus, Heart, Pencil, Users, Phone } from 'lucide-react'
 import { Card, CardHeader, CardBody, Button, Input, Select, Textarea, Modal, Badge, EmptyState } from '../components/UI'
 import toast from 'react-hot-toast'
 import api from '../api/api'
+import { useAuth } from '../context/AuthContext'
 
 const STORAGE_KEY = 'safesphere_emergency_contacts'
 
@@ -30,6 +31,7 @@ const defaultContacts = [
 ]
 
 export default function EmergencyInfo() {
+  const { refreshProfile } = useAuth()
   const [contacts, setContacts] = useState([])
   const [modalOpen, setModalOpen] = useState(false)
   const [editContactId, setEditContactId] = useState(null)
@@ -101,6 +103,7 @@ export default function EmergencyInfo() {
         additionalNotes: data.additionalNotes
       })
       toast.success('Medical info saved!')
+      refreshProfile() // Update global user state
     } catch (err) {
       toast.error('Failed to save medical info')
     } finally {
@@ -142,6 +145,7 @@ export default function EmergencyInfo() {
       toast.success(editContactId ? 'Contact updated!' : 'Contact added!')
       setModalOpen(false)
       fetchContacts()
+      refreshProfile() // Update global user state
     } catch (err) {
       toast.error('Failed to save contact')
     } finally {
@@ -155,6 +159,7 @@ export default function EmergencyInfo() {
       await api.delete(`/api/user/contacts/${id}`)
       toast.success('Contact removed')
       fetchContacts()
+      refreshProfile() // Update global user state
     } catch (err) {
       toast.error('Failed to remove contact')
     }

@@ -19,7 +19,7 @@ const navItems = [
   { id: '/travel', label: 'Travel Safety', icon: Clock },
   { id: '/map', label: 'Safety Map', icon: Map },
   { id: '/safety-map', label: 'Incident Heatmap', icon: Flame },
-  { id: '/emergency-info', label: 'Helpline Directory', icon: Phone },
+  { id: '/emergency-info', label: 'Emergency Contacts', icon: Phone },
   { id: '/emergency-safety', label: 'Emergency Guide', icon: Footprints },
   { id: '/safety-tips', label: 'Safety Tips', icon: Lightbulb },
   { section: 'Tools' },
