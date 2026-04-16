@@ -5,7 +5,15 @@ import { Card, CardHeader, CardBody, Button, Toggle, MapPlaceholder, Badge } fro
 import toast from 'react-hot-toast'
 
 export default function LiveLocation() {
-  const [sharing, setSharing] = useState(true)
+  const [sharing, setSharing] = useState(() => {
+    const saved = localStorage.getItem('safesphere_live_sharing');
+    return saved !== null ? JSON.parse(saved) : true;
+  })
+
+  // Persist sharing state
+  useEffect(() => {
+    localStorage.setItem('safesphere_live_sharing', JSON.stringify(sharing));
+  }, [sharing])
   const [position, setPosition] = useState(null)
   const [accuracy, setAccuracy] = useState(null)
   const [lastUpdate, setLastUpdate] = useState(null)
