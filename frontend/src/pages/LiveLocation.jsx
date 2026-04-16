@@ -58,7 +58,7 @@ export default function LiveLocation() {
             ? Date.now() - lastSentPosition.current.time 
             : Infinity;
 
-          if (distance > 2 || timeSinceLastUpdate > 5000) { // Send if moved > 2m or 5s passed
+          if (distance > 5 || timeSinceLastUpdate > 60000) { // Send if moved > 5m or 1 min passed
             // 1. Update general user location
             api.post('/api/location/update', { latitude, longitude })
               .then(() => {

@@ -17,4 +17,7 @@ const locationSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
+// Add TTL index to automatically delete records after 24 hours
+locationSchema.index({ createdAt: 1 }, { expireAfterSeconds: 86400 });
+
 export default mongoose.model("Location", locationSchema);
