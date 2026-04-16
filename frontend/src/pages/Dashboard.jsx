@@ -131,7 +131,6 @@ export default function Dashboard() {
               <p className="text-[11px] text-slate-400">Your latest safety events</p>
             </div>
           </div>
-          <Badge dot>Today</Badge>
         </CardHeader>
         <CardBody className="stagger-children">
           {filteredActivity.length === 0 ? (
